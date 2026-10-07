@@ -202,3 +202,8 @@ def test_python_client(make_client, fake):
     with pytest.raises(SQLSentryAPIError) as e:
         client.schema("hr")
     assert e.value.http_status == 404 and e.value.code == "datasource_not_found"
+
+
+def test_openapi_declares_bearer_auth(make_client):
+    spec = make_client().get("/openapi.json").json()
+    assert spec["components"]["securitySchemes"]["HTTPBearer"]["scheme"] == "bearer"
