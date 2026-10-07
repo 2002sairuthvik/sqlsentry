@@ -24,6 +24,11 @@ class ConfigError(SQLSentryError):
     code = "config_error"
 
 
+class BadRequest(SQLSentryError):
+    code = "bad_request"
+    http_status = 400
+
+
 class AuthError(SQLSentryError):
     code = "unauthorized"
     http_status = 401
