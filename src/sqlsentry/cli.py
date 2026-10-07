@@ -236,7 +236,16 @@ def _print_table(columns: list[str], rows: list[list], max_width: int = 40) -> N
             print("  ".join("-" * w for w in widths))
 
 
+def _safe_console() -> None:
+    """Model output can contain characters a legacy console code page (e.g. Windows cp1252)
+    can't encode; replace them instead of crashing."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    _safe_console()
     _load_dotenv()
     args = build_parser().parse_args(argv)
     logging.basicConfig(

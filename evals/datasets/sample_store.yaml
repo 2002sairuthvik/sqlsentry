@@ -144,7 +144,7 @@ cases:
       ) AS t
 
   - id: electronics-units-2025
-    question: How many units of Electronics products were ordered in 2025?
+    question: How many units of Electronics products were ordered in 2025, counting orders of every status?
     sql: |
       SELECT SUM(oi.quantity)
       FROM order_items oi

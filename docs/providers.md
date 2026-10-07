@@ -9,7 +9,7 @@ Check each service's current model list; the names below are examples.
 groq:
   type: openai_compatible
   base_url: https://api.groq.com/openai/v1
-  model: llama-3.3-70b-versatile
+  model: openai/gpt-oss-120b
   api_key_env: GROQ_API_KEY
 ```
 

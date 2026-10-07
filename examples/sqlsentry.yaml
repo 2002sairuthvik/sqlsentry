@@ -7,7 +7,7 @@ llm:
     groq:                       # free tier, key from https://console.groq.com/keys
       type: openai_compatible
       base_url: https://api.groq.com/openai/v1
-      model: llama-3.3-70b-versatile   # see https://console.groq.com/docs/models
+      model: openai/gpt-oss-120b   # see https://console.groq.com/docs/models
       api_key_env: GROQ_API_KEY
     local:                      # fully local and private: `ollama pull qwen2.5-coder:7b`
       type: openai_compatible

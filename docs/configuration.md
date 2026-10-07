@@ -13,7 +13,7 @@ llm:
     groq:
       type: openai_compatible   # openai_compatible | anthropic | fake | "my.module:MyProvider"
       base_url: https://api.groq.com/openai/v1
-      model: llama-3.3-70b-versatile
+      model: openai/gpt-oss-120b
       api_key_env: GROQ_API_KEY # name of the env var, never the key itself
       temperature: 0.0
       max_tokens: 4096

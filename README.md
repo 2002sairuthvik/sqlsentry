@@ -7,35 +7,38 @@ Optionally run it read-only and get the rows. Use it as a Python library, a CLI,
 ```text
 $ sqlsentry ask store "top 5 customers by revenue" --execute
 
-/* Top 5 customers by revenue (delivered or shipped orders only, per the glossary) */
+/* Top 5 customers by revenue (delivered or shipped orders) */
 SELECT
-  c.id,
+  c.id AS customer_id,
   c.name,
   SUM(oi.quantity * oi.unit_price) AS revenue
 FROM customers AS c
 JOIN orders AS o
-  ON o.customer_id = c.id /* the customer who placed each order */
+  ON o.customer_id = c.id /* link orders to customers */
 JOIN order_items AS oi
-  ON oi.order_id = o.id
+  ON oi.order_id = o.id /* link line items to orders */
 WHERE
-  o.status IN ('delivered', 'shipped')
+  o.status IN ('delivered', 'shipped') /* only count sales orders */
 GROUP BY
   c.id,
   c.name
 ORDER BY
-  revenue DESC
+  revenue DESC,
+  c.name
 LIMIT 5
 
-Explanation: Adds up what each customer spent on delivered or shipped orders and lists the five biggest spenders.
+Explanation: The query adds up quantity × unit_price for every line item belonging to orders that are delivered or shipped, groups the total by each customer, and returns the five customers with the highest revenue.
 
-id   name          revenue
----  ------------  --------
-52   Ben Mensah    19359.02
-57   Ben Sato      17446.68
-102  Elif Rao      16504.29
-25   Farah Garcia  16161.64
-89   Chen Rao      16159.56
+customer_id  name          revenue
+-----------  ------------  --------
+52           Ben Mensah    19359.02
+57           Ben Sato      17446.68
+102          Elif Rao      16504.29
+25           Farah Garcia  16161.64
+89           Chen Rao      16159.56
 ```
+
+<sub>Real output from `openai/gpt-oss-120b` on Groq's free tier against the sample database.</sub>
 
 ## Why sqlsentry
 

@@ -134,3 +134,15 @@ def test_shipped_example_config_and_eval_dataset_are_consistent(sample_db_url):
         for case in dataset.cases:
             result = sentry.execute_sql("store", case.sql)
             assert result.row_count >= 1, case.id
+
+
+def test_cli_survives_legacy_console_encoding(config_with_fake, monkeypatch):
+    import io
+    import sys
+
+    buf = io.BytesIO()
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(buf, encoding="cp1252"))
+    cfg = config_with_fake([{"sql": "SELECT name FROM products", "explanation": "narrow space → ok"}])
+    assert main(["ask", "store", "products", "-c", cfg]) == 0
+    sys.stdout.flush()
+    assert b"narrow?space" in buf.getvalue()
