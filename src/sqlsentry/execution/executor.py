@@ -27,6 +27,9 @@ from ..errors import ExecutionError
 def readonly_connection(engine: Engine, dialect: str, timeout_s: int) -> Iterator[Connection]:
     try:
         with engine.connect() as conn:  # SQLAlchemy 2.0 auto-begins on the first statement
+            # Execute SQL text exactly as written: without this, drivers such as psycopg and
+            # pymysql treat '%' (e.g. in LIKE 'A%') as a parameter placeholder.
+            conn = conn.execution_options(no_parameters=True)
             try:
                 _session_guards(conn, dialect, timeout_s)
                 yield conn

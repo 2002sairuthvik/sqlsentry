@@ -32,7 +32,8 @@ def pg_engine():
         c.execute(text(f"COMMENT ON COLUMN {SCHEMA}.customers.name IS 'Full name'"))
         c.execute(
             text(
-                f"CREATE TABLE {SCHEMA}.orders (id int primary key, customer_id int references {SCHEMA}.customers(id), total numeric(10,2))"
+                f"CREATE TABLE {SCHEMA}.orders (id int primary key, "
+                f"customer_id int references {SCHEMA}.customers(id), total numeric(10,2))"
             )
         )
         c.execute(

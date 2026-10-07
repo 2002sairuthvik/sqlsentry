@@ -34,6 +34,7 @@ postgres = ["psycopg[binary]>=3.1"]
 mysql = ["pymysql>=1.1"]
 dev = [
     "pytest>=8",
+    "anthropic>=1.9",
     "ruff>=0.6",
     "fastapi>=0.115",
     "uvicorn>=0.30",
@@ -63,6 +64,9 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S"]
 ignore = ["S101", "S608"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "B"]
