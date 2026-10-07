@@ -24,6 +24,8 @@ def principal(
 ) -> Principal:
     """Authenticate the caller and apply the per-consumer rate limit."""
     key = credentials.credentials if credentials else request.headers.get("x-api-key")
+    if key and key.lower().startswith("bearer "):  # "Bearer" pasted into the /docs Authorize box
+        key = key[7:].strip()
     p = request.app.state.auth.authenticate(key)
     request.app.state.limiter.check(p.name)
     request.state.consumer = p.name

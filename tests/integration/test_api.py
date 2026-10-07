@@ -212,3 +212,9 @@ def test_openapi_declares_bearer_auth(make_client):
 def test_root_redirects_to_docs(make_client):
     r = make_client().get("/", follow_redirects=False)
     assert r.status_code == 307 and r.headers["location"] == "/docs"
+
+
+def test_doubled_bearer_prefix_is_tolerated(make_client):
+    c = make_client()
+    r = c.get("/v1/datasources", headers={"Authorization": f"Bearer Bearer {KEYS['full']}"})
+    assert r.status_code == 200
