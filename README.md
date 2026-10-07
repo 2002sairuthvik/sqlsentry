@@ -151,6 +151,15 @@ sqlsentry eval evals/datasets/sample_store.yaml --provider local
 
 Write your own dataset of real questions plus verified SQL. It's the best way to pick a model and to catch regressions (`--min-accuracy 0.8` fails CI below 80%).
 
+Measured on the bundled 25-question sample dataset, 3 runs per model, Groq free tier (October 2026):
+
+| Model | Accuracy (mean of 3 runs) | Avg latency | Notes |
+|---|---|---|---|
+| `openai/gpt-oss-120b` (default) | 97% (73/75) | 3.4 s | One question (average line items per order) missed in 2 of 3 runs |
+| `qwen/qwen3.8-27b` | 95% (71/75) | 8.9 s | No wrong answers; all 4 misses were free-tier rate limits (HTTP 429) |
+
+Small datasets swing by a question or two between runs, and your schema is not this one, so measure on your own data.
+
 ## Project status and roadmap
 
 v0.1 is in development. Planned next:
