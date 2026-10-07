@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlsentry"
+version = "0.1.0.dev0"
+description = "Safety-first, model-agnostic natural language to SQL. Library, CLI and REST API."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Sai Ruthvik" }]
+keywords = ["nl2sql", "text-to-sql", "llm", "sql", "database", "guardrails"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "sqlglot>=30",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.7",
+    "pyyaml>=6",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.115", "uvicorn>=0.30"]
+anthropic = ["anthropic>=1.9"]
+postgres = ["psycopg[binary]>=3.1"]
+mysql = ["pymysql>=1.1"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
+
+[project.scripts]
+sqlsentry = "sqlsentry.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/2002sairuthvik/sqlsentry"
+Issues = "https://github.com/2002sairuthvik/sqlsentry/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+sqlsentry = ["py.typed", "prompts/*.md", "demo/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["postgres: needs a running PostgreSQL (SQLSENTRY_TEST_PG_URL)"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101", "S608"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B"]
