@@ -1,0 +1,20 @@
+site_name: sqlsentry
+site_description: Safety-first, model-agnostic natural language to SQL
+repo_url: https://github.com/2002sairuthvik/sqlsentry
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Configuration: configuration.md
+  - LLM providers: providers.md
+  - Security model: security-model.md
+  - Architecture: architecture.md
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+theme:
+  name: material

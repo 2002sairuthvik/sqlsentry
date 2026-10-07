@@ -1,0 +1,59 @@
+# sqlsentry configuration.
+# ${VAR} and ${VAR:-default} are read from the environment (or a .env file for the CLI).
+
+llm:
+  default: ${SQLSENTRY_LLM:-groq}
+  providers:
+    groq:                       # free tier, key from https://console.groq.com/keys
+      type: openai_compatible
+      base_url: https://api.groq.com/openai/v1
+      model: llama-3.3-70b-versatile   # see https://console.groq.com/docs/models
+      api_key_env: GROQ_API_KEY
+    local:                      # fully local and private: `ollama pull qwen2.5-coder:7b`
+      type: openai_compatible
+      base_url: ${OLLAMA_URL:-http://localhost:11434/v1}
+      model: qwen2.5-coder:7b
+    # claude:                   # pip install 'sqlsentry[anthropic]'
+    #   type: anthropic
+    #   model: claude-opus-5-5
+    #   api_key_env: ANTHROPIC_API_KEY
+
+datasources:
+  store:
+    url: sqlite:////data/store.db
+    description: Fictional online store with customers, products, orders and order items.
+    policy:
+      tables:
+        include: ["*"]          # default-deny: nothing is visible unless listed here
+        exclude: ["internal_*"]
+      columns:
+        hidden: ["customers.email"]   # never shown to the model, never queryable
+      max_rows: 500
+      timeout_s: 30
+      allow_execute: true
+      allowed_providers: ["*"]  # e.g. ["local"] to keep this schema off external models
+    glossary:
+      - "revenue = SUM(order_items.quantity * order_items.unit_price)"
+      - "Sales only count orders with status 'delivered' or 'shipped'; 'cancelled' orders never count."
+      - "order_date and signup_date are ISO dates stored as text (YYYY-MM-DD)."
+    examples:
+      - question: How many orders were cancelled?
+        sql: |
+          -- Count cancelled orders
+          SELECT COUNT(*) AS cancelled_orders
+          FROM orders
+          WHERE status = 'cancelled'
+
+consumers:                      # API keys for `sqlsentry serve` (create with `sqlsentry hash-key`)
+  - name: demo
+    key_sha256: ["${SQLSENTRY_DEMO_KEY_SHA256:-}"]
+    grants:
+      - datasource: store
+        scopes: [generate, execute, validate, schema]
+
+server:
+  auth_enabled: true
+  rate_limit_per_minute: 30
+
+store:
+  url: sqlite:////data/.sqlsentry/history.db

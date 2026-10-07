@@ -1,8 +1,8 @@
 """Accuracy evaluation on a golden question -> SQL dataset.
 
-A case passes when the generated SQL returns the same result set as the golden SQL
-(row order and column order ignored, numbers compared after rounding). Comparing results
-instead of SQL text is what matters: many different queries are correct.
+A case passes when the generated SQL returns the golden SQL's result set (row order and
+column order ignored, extra columns allowed, numbers compared after rounding to 2 dp).
+Comparing results instead of SQL text is what matters: many different queries are correct.
 
 Dataset format (YAML):
 
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import time
 from collections import Counter
+from itertools import islice, product
 from pathlib import Path
 from typing import Any, Literal
 
@@ -79,17 +80,36 @@ def _norm(v: Any) -> Any:
     return str(v).strip()
 
 
+_MAX_COLUMN_MAPPINGS = 500
+
+
 def results_match(expected: list[list[Any]], actual: list[list[Any]]) -> bool:
-    exp_rows = Counter(tuple(_norm(v) for v in r) for r in expected)
-    act_rows = Counter(tuple(_norm(v) for v in r) for r in actual)
-    if exp_rows == act_rows:
+    """True if ``actual`` contains ``expected``'s data: same rows (any order), and every
+    expected column appears among the actual columns (any order, extra columns allowed)."""
+    exp = [tuple(_norm(v) for v in r) for r in expected]
+    act = [tuple(_norm(v) for v in r) for r in actual]
+    if len(exp) != len(act):
+        return False
+    if Counter(exp) == Counter(act):
         return True
+    if not exp:
+        return True
+    n_exp, n_act = len(exp[0]), len(act[0])
+    if n_act < n_exp:
+        return False
 
-    # Same data, different column order.
-    def key(r):
-        return tuple(sorted(map(repr, r)))
+    # Candidate actual columns for each expected column: same multiset of values.
+    def column(rows, i):
+        return Counter(r[i] for r in rows)
 
-    return Counter(key(r) for r in exp_rows.elements()) == Counter(key(r) for r in act_rows.elements())
+    candidates = [[j for j in range(n_act) if column(act, j) == column(exp, i)] for i in range(n_exp)]
+    if any(not c for c in candidates):
+        return False
+    target = Counter(exp)
+    for mapping in islice(product(*candidates), _MAX_COLUMN_MAPPINGS):
+        if len(set(mapping)) == n_exp and Counter(tuple(r[j] for j in mapping) for r in act) == target:
+            return True
+    return False
 
 
 def run_eval(sentry: SQLSentry, path: str | Path, *, provider: str | None = None) -> EvalReport:

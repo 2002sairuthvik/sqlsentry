@@ -112,3 +112,25 @@ def test_results_match():
     assert results_match([[1, "a"], [2, "b"]], [[2, "b"], [1, "a"]])
     assert results_match([[1.004, "a"]], [["a", 1.0]])
     assert not results_match([[1]], [[1], [1]])
+
+
+def test_results_match_allows_extra_columns():
+    assert results_match([["Office Chair"]], [["Office Chair", 123.45]])
+    assert not results_match([["Office Chair"]], [["Desk Lamp", 123.45]])
+
+
+def test_shipped_example_config_and_eval_dataset_are_consistent(sample_db_url):
+    """Every golden query must pass the guard under the example config's policy."""
+    from sqlsentry import SQLSentry
+    from sqlsentry.evals import load_dataset
+
+    root = Path(__file__).resolve().parents[2]
+    settings = Settings.from_yaml(root / "examples" / "sqlsentry.yaml")
+    settings.datasources["store"].url = sample_db_url
+    settings.store.url = None
+    dataset = load_dataset(root / "evals" / "datasets" / "sample_store.yaml")
+    assert len(dataset.cases) >= 20
+    with SQLSentry(settings) as sentry:
+        for case in dataset.cases:
+            result = sentry.execute_sql("store", case.sql)
+            assert result.row_count >= 1, case.id

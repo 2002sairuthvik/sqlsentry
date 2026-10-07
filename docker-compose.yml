@@ -1,0 +1,29 @@
+# docker compose up                      -> API on http://localhost:8000 using Groq (needs GROQ_API_KEY)
+# docker compose --profile local up      -> also starts Ollama for a fully local setup
+#   then: docker compose exec ollama ollama pull qwen2.5-coder:7b
+#   and set SQLSENTRY_LLM=local
+services:
+  sqlsentry:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SQLSENTRY_LLM: ${SQLSENTRY_LLM:-groq}
+      SQLSENTRY_DEMO_KEY_SHA256: ${SQLSENTRY_DEMO_KEY_SHA256:-}
+      OLLAMA_URL: http://ollama:11434/v1
+    volumes:
+      - sqlsentry-data:/data/.sqlsentry
+
+  ollama:
+    profiles: ["local"]
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+
+volumes:
+  sqlsentry-data:
+  ollama-models:

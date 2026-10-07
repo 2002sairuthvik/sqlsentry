@@ -1,0 +1,153 @@
+# Golden questions for the sample store database (`sqlsentry sample-db`).
+# A case passes when the generated SQL returns the same result set as `sql`
+# (row/column order ignored, extra columns in the answer allowed, numbers rounded to 2 dp).
+# Revenue follows the glossary in examples/sqlsentry.yaml: only 'delivered' and 'shipped' orders count.
+datasource: store
+cases:
+  - id: customer-count
+    question: How many customers are there?
+    sql: SELECT COUNT(*) FROM customers
+
+  - id: customers-per-country
+    question: How many customers are in each country?
+    sql: SELECT country, COUNT(*) FROM customers GROUP BY country
+
+  - id: enterprise-customers
+    question: How many enterprise customers do we have?
+    sql: SELECT COUNT(*) FROM customers WHERE segment = 'enterprise'
+
+  - id: hyderabad-customers
+    question: List the names of customers located in Hyderabad.
+    sql: SELECT name FROM customers WHERE city = 'Hyderabad'
+
+  - id: signups-2024
+    question: How many customers signed up in 2024?
+    sql: SELECT COUNT(*) FROM customers WHERE signup_date BETWEEN '2024-01-01' AND '2024-12-31'
+
+  - id: products-per-category
+    question: How many products are in each category?
+    sql: SELECT category, COUNT(*) FROM products GROUP BY category
+
+  - id: avg-price-per-category
+    question: What is the average product price in each category?
+    sql: SELECT category, AVG(unit_price) FROM products GROUP BY category
+
+  - id: most-expensive-product
+    question: What is the most expensive product?
+    sql: SELECT name FROM products ORDER BY unit_price DESC LIMIT 1
+
+  - id: cheapest-three
+    question: Which are the three cheapest products?
+    sql: SELECT name FROM products ORDER BY unit_price ASC LIMIT 3
+
+  - id: orders-per-status
+    question: How many orders are there in each status?
+    sql: SELECT status, COUNT(*) FROM orders GROUP BY status
+
+  - id: pending-orders
+    question: How many orders are still pending?
+    sql: SELECT COUNT(*) FROM orders WHERE status = 'pending'
+
+  - id: orders-2024
+    question: How many orders were placed in 2024?
+    sql: SELECT COUNT(*) FROM orders WHERE order_date BETWEEN '2024-01-01' AND '2024-12-31'
+
+  - id: customers-without-orders
+    question: How many customers have never placed an order?
+    sql: SELECT COUNT(*) FROM customers WHERE id NOT IN (SELECT customer_id FROM orders)
+
+  - id: customers-more-than-10-orders
+    question: How many customers have placed more than 10 orders?
+    sql: |
+      SELECT COUNT(*) FROM (
+        SELECT customer_id FROM orders GROUP BY customer_id HAVING COUNT(*) > 10
+      ) AS t
+
+  - id: pending-business-orders
+    question: How many pending orders belong to business customers?
+    sql: |
+      SELECT COUNT(*) FROM orders o JOIN customers c ON c.id = o.customer_id
+      WHERE o.status = 'pending' AND c.segment = 'business'
+
+  - id: avg-line-items
+    question: On average, how many line items does an order have?
+    sql: |
+      SELECT AVG(n) FROM (SELECT order_id, COUNT(*) AS n FROM order_items GROUP BY order_id) AS t
+
+  - id: units-best-seller
+    question: Which product has sold the most units across all orders?
+    sql: |
+      SELECT p.name FROM order_items oi JOIN products p ON p.id = oi.product_id
+      GROUP BY p.id, p.name ORDER BY SUM(oi.quantity) DESC LIMIT 1
+
+  - id: total-revenue
+    question: What is our total revenue?
+    sql: |
+      SELECT SUM(oi.quantity * oi.unit_price) FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id WHERE o.status IN ('delivered', 'shipped')
+
+  - id: revenue-by-category
+    question: What is the revenue for each product category?
+    sql: |
+      SELECT p.category, SUM(oi.quantity * oi.unit_price)
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      JOIN products p ON p.id = oi.product_id
+      WHERE o.status IN ('delivered', 'shipped')
+      GROUP BY p.category
+
+  - id: top-category
+    question: Which product category brings in the most revenue?
+    sql: |
+      SELECT p.category
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      JOIN products p ON p.id = oi.product_id
+      WHERE o.status IN ('delivered', 'shipped')
+      GROUP BY p.category ORDER BY SUM(oi.quantity * oi.unit_price) DESC LIMIT 1
+
+  - id: revenue-by-country
+    question: What is the total revenue by customer country?
+    sql: |
+      SELECT c.country, SUM(oi.quantity * oi.unit_price)
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      JOIN customers c ON c.id = o.customer_id
+      WHERE o.status IN ('delivered', 'shipped')
+      GROUP BY c.country
+
+  - id: top-5-customers
+    question: Who are the top 5 customers by revenue? Show their customer id and name.
+    sql: |
+      SELECT c.id, c.name
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      JOIN customers c ON c.id = o.customer_id
+      WHERE o.status IN ('delivered', 'shipped')
+      GROUP BY c.id, c.name
+      ORDER BY SUM(oi.quantity * oi.unit_price) DESC
+      LIMIT 5
+
+  - id: largest-order
+    question: Which order id has the highest total value, regardless of status?
+    sql: |
+      SELECT order_id FROM order_items GROUP BY order_id
+      ORDER BY SUM(quantity * unit_price) DESC LIMIT 1
+
+  - id: avg-delivered-order-value
+    question: What is the average value of a delivered order?
+    sql: |
+      SELECT AVG(total) FROM (
+        SELECT o.id, SUM(oi.quantity * oi.unit_price) AS total
+        FROM orders o JOIN order_items oi ON oi.order_id = o.id
+        WHERE o.status = 'delivered' GROUP BY o.id
+      ) AS t
+
+  - id: electronics-units-2025
+    question: How many units of Electronics products were ordered in 2025?
+    sql: |
+      SELECT SUM(oi.quantity)
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      JOIN products p ON p.id = oi.product_id
+      WHERE p.category = 'Electronics' AND o.order_date BETWEEN '2025-01-01' AND '2025-12-31'

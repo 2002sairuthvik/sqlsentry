@@ -55,3 +55,16 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev,postgres]"
       - run: pytest -q -m postgres
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t sqlsentry:ci .
+      - name: Container starts and is healthy
+        run: |
+          docker run -d --name sqs -p 8000:8000 sqlsentry:ci
+          for i in $(seq 1 30); do curl -fs localhost:8000/health && exit 0; sleep 1; done
+          docker logs sqs; exit 1
+      - name: Guard works inside the container
+        run: docker exec sqs sqlsentry validate store "DELETE FROM orders" && exit 1 || true
