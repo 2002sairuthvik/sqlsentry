@@ -38,7 +38,7 @@ CANDIDATE_JSON_SCHEMA: dict[str, Any] = {
         "tables_used": {"type": "array", "items": {"type": "string"}},
         "assumptions": {"type": "array", "items": {"type": "string"}},
         "needs_clarification": {"type": "boolean"},
-        "clarification_question": {"type": ["string", "null"]},
+        "clarification_question": {"anyOf": [{"type": "string"}, {"type": "null"}]},
     },
     "required": [
         "sql",
