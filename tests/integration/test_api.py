@@ -207,3 +207,8 @@ def test_python_client(make_client, fake):
 def test_openapi_declares_bearer_auth(make_client):
     spec = make_client().get("/openapi.json").json()
     assert spec["components"]["securitySchemes"]["HTTPBearer"]["scheme"] == "bearer"
+
+
+def test_root_redirects_to_docs(make_client):
+    r = make_client().get("/", follow_redirects=False)
+    assert r.status_code == 307 and r.headers["location"] == "/docs"
