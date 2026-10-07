@@ -129,3 +129,33 @@ def test_output_round_trips(store_catalog, store_policy):
 def test_cross_database_reference_rejected(store_catalog, store_policy):
     with pytest.raises((UnsafeSQLError, InvalidSQLError)):
         guard("SELECT * FROM otherdb.public.orders", store_catalog, store_policy, dialect="postgres")
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT COUNT(*) AS n FROM orders",
+        "SELECT SUM(quantity * unit_price) AS revenue, AVG(quantity) AS q FROM order_items",
+        "SELECT AVG(n) AS a FROM (SELECT order_id, COUNT(*) AS n FROM order_items GROUP BY order_id) AS t",
+    ],
+)
+def test_single_row_aggregates_are_not_capped(store_catalog, store_policy, sql):
+    r = guard(sql, store_catalog, store_policy)
+    assert "LIMIT" not in r.sql.upper()
+    assert r.warnings == []
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT status, COUNT(*) AS n FROM orders GROUP BY status",  # one row per group
+        "SELECT COUNT(*) OVER () AS n FROM orders",  # window: one row per input row
+        "SELECT (SELECT MAX(unit_price) FROM products) AS m FROM orders",  # scalar subquery per row
+        "SELECT id, COUNT(*) OVER (PARTITION BY status) AS n FROM orders",
+        "SELECT name FROM products",
+        "SELECT COUNT(*) AS n FROM orders UNION ALL SELECT COUNT(*) AS n FROM products",  # set op
+    ],
+)
+def test_multi_row_queries_keep_the_cap(store_catalog, store_policy, sql):
+    r = guard(sql, store_catalog, store_policy)
+    assert r.sql.rstrip().endswith("LIMIT 100")

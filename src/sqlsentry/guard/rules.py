@@ -90,11 +90,28 @@ def check_columns(
     return stmt, warnings
 
 
+def returns_single_row(stmt: exp.Expression) -> bool:
+    """True only for a plain SELECT without GROUP BY whose every output column is an
+    aggregate (e.g. ``SELECT COUNT(*) FROM t``), which can never return more than one row.
+
+    Deliberately strict: window functions (one value per row) and subqueries in the
+    projection (which may hide a non-aggregate) disqualify it, so the row cap still applies.
+    """
+    if not isinstance(stmt, exp.Select) or stmt.args.get("group") or not stmt.expressions:
+        return False
+    return all(
+        e.find(exp.AggFunc) and not e.find(exp.Window) and not e.find(exp.Subquery, exp.Select)
+        for e in stmt.expressions
+    )
+
+
 def apply_limit(stmt: exp.Expression, max_rows: int) -> tuple[exp.Expression, list[str]]:
     if not isinstance(stmt, exp.Query):
         return stmt, []
     limit = stmt.args.get("limit")
     if limit is None:
+        if returns_single_row(stmt):
+            return stmt, []
         return stmt.limit(max_rows), [f"LIMIT {max_rows} added (policy row cap)."]
 
     count = limit.args.get("count") if isinstance(limit, exp.Fetch) else limit.expression

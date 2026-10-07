@@ -9,7 +9,12 @@ llm:
       base_url: https://api.groq.com/openai/v1
       model: openai/gpt-oss-120b   # see https://console.groq.com/docs/models
       api_key_env: GROQ_API_KEY
-    local:                      # fully local and private: `ollama pull qwen2.5-coder:7b`
+    groq-qwen:                  # second free Groq model, handy for `sqlsentry eval --provider groq-qwen`
+      type: openai_compatible
+      base_url: https://api.groq.com/openai/v1
+      model: qwen/qwen3.8-27b
+      api_key_env: GROQ_API_KEY
+    local:                   # fully local and private: `ollama pull qwen2.5-coder:7b`
       type: openai_compatible
       base_url: ${OLLAMA_URL:-http://localhost:11434/v1}
       model: qwen2.5-coder:7b
