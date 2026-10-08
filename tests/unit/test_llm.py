@@ -215,3 +215,9 @@ def test_anthropic_refusal_raises():
     p._client = SimpleNamespace(messages=SimpleNamespace(create=lambda **k: resp))
     with pytest.raises(LLMError, match="declined"):
         p.complete("s", [{"role": "user", "content": "q"}], {})
+
+
+def test_system_prompt_warns_about_join_fan_out():
+    from sqlsentry.prompts import system_prompt
+
+    assert "COUNT(DISTINCT parent_key)" in system_prompt("postgres")

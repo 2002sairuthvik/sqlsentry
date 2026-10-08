@@ -151,3 +151,42 @@ cases:
       JOIN orders o ON o.id = oi.order_id
       JOIN products p ON p.id = oi.product_id
       WHERE p.category = 'Electronics' AND o.order_date BETWEEN '2025-01-01' AND '2025-12-31'
+
+  # --- Join fan-out: joining a parent to its child rows repeats the parent; counts and
+  # --- averages at the parent level need DISTINCT or a per-parent subquery first.
+  - id: orders-per-customer
+    question: On average, how many orders has each customer placed?
+    sql: SELECT AVG(n) FROM (SELECT customer_id, COUNT(*) AS n FROM orders GROUP BY customer_id) AS t
+
+  - id: avg-order-value-by-segment
+    question: What is the average order value for each customer segment, counting orders of every status?
+    sql: |
+      SELECT c.segment, AVG(t.total)
+      FROM (
+        SELECT o.id, o.customer_id, SUM(oi.quantity * oi.unit_price) AS total
+        FROM orders o JOIN order_items oi ON oi.order_id = o.id
+        GROUP BY o.id, o.customer_id
+      ) AS t
+      JOIN customers c ON c.id = t.customer_id
+      GROUP BY c.segment
+
+  - id: customers-cancelled-sports-2024
+    question: How many different customers had a cancelled order containing Sports products in 2024?
+    sql: |
+      SELECT COUNT(DISTINCT o.customer_id)
+      FROM orders o
+      JOIN order_items oi ON oi.order_id = o.id
+      JOIN products p ON p.id = oi.product_id
+      WHERE p.category = 'Sports' AND o.status = 'cancelled'
+        AND o.order_date BETWEEN '2024-01-01' AND '2024-12-31'
+
+  - id: orders-with-electronics
+    question: How many orders contain at least one Electronics product?
+    sql: |
+      SELECT COUNT(DISTINCT oi.order_id)
+      FROM order_items oi JOIN products p ON p.id = oi.product_id
+      WHERE p.category = 'Electronics'
+
+  - id: avg-units-per-order
+    question: On average, how many units are in an order?
+    sql: SELECT AVG(units) FROM (SELECT order_id, SUM(quantity) AS units FROM order_items GROUP BY order_id) AS t

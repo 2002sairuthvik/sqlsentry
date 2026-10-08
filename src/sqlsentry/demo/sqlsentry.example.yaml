@@ -34,7 +34,7 @@ datasources:
       allowed_providers: ["*"]  # e.g. ["local"] to keep this schema off external models
     glossary:
       - "revenue = SUM(order_items.quantity * order_items.unit_price)"
-      - "Sales only count orders with status 'delivered' or 'shipped'; 'cancelled' orders never count."
+      - "Revenue and sales figures only count orders with status 'delivered' or 'shipped'. Questions about orders in general (counts, sizes, items, units) include every status."
       - "order_date and signup_date are ISO dates stored as text (YYYY-MM-DD)."
     examples:
       - question: How many orders were cancelled?

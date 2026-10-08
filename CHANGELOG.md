@@ -22,3 +22,8 @@ All notable changes to this project are documented here. The format follows
     execution permission is checked before the model is called.
   - `POST /v1/sql/execute` and `execute_sql()` also run user-edited SQL, under the same guard.
   - `GET /v1/datasources` reports each datasource's `mode` and `can_execute`.
+
+### Changed
+- System prompt: rule against join fan-out (count parents with DISTINCT; aggregate per parent first).
+- Example glossary: revenue/sales rule is now explicitly scoped so it doesn't filter general order questions.
+- Eval dataset: 30 questions, including 5 new join fan-out traps.

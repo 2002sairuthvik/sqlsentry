@@ -11,6 +11,7 @@ Rules:
 8. Text values must match the sample values shown in the schema exactly (case, spelling).
 9. If the question is ambiguous in a way that changes the answer (unclear metric, time range or entity), set needs_clarification to true, leave sql empty, and ask one short question. Otherwise make a reasonable assumption and list it in assumptions.
 10. explanation: one to three plain-English sentences that someone who doesn't read SQL can understand.
+11. Watch for join fan-out. Joining a table to its one-to-many child rows (e.g. orders to order items) repeats each parent row once per child. After such a join, count parents with COUNT(DISTINCT parent_key), never a plain COUNT. For an "average/total per X", first compute one value per X (in a subquery or CTE grouped by X's key), then aggregate those values.
 
 Respond with only a JSON object (no markdown, no prose around it) that matches this JSON schema:
 {json_schema}
