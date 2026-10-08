@@ -83,6 +83,13 @@ class LLMError(SQLSentryError):
     http_status = 502
 
 
+class ExecutionUnavailable(SQLSentryError):
+    """The datasource is schema-only: SQL can be generated and validated but not run here."""
+
+    code = "execution_unavailable"
+    http_status = 409
+
+
 class ExecutionError(SQLSentryError):
     code = "execution_error"
     http_status = 422

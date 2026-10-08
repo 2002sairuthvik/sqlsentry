@@ -47,6 +47,14 @@ Execution runs in a transaction that is always rolled back. Where the dialect su
 read-only at the database level (`SET TRANSACTION READ ONLY` on Postgres, `PRAGMA query_only` on
 SQLite, `SET SESSION TRANSACTION READ ONLY` on MySQL) with a statement timeout.
 
+## Schema-only datasources and edited SQL
+
+- A datasource with only a `schema_file` has **no database access at all**: sqlsentry generates and
+  validates SQL against the file, and every attempt to execute returns `409 execution_unavailable`
+  before any model call is made.
+- SQL a user edited (`POST /v1/sql/execute` with `datasource` + `sql`, or `execute_sql()`) goes
+  through exactly the same guard, policy, scope check and read-only execution as generated SQL.
+
 ## What is sent to the LLM
 
 Only the policy-filtered schema (table and column names, types, comments, foreign keys, and a few

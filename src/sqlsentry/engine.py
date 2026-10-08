@@ -25,6 +25,7 @@ from .errors import (
     ConfigError,
     DataSourceNotFound,
     ExecutionError,
+    ExecutionUnavailable,
     GenerationFailed,
     GenerationNotFound,
     InvalidSQLError,
@@ -39,12 +40,14 @@ from .llm.parsing import ParseError, parse_candidate
 from .llm.registry import build_provider
 from .prompts import build_prompt, repair_messages
 from .schema.cache import TTLCache
+from .schema.files import load_schema_file
 from .schema.introspect import introspect
 from .schema.linker import link_tables, select_examples
 from .schema.models import SchemaCatalog
 from .store import MemoryStore, SQLStore, Store
 from .types import (
     CANDIDATE_JSON_SCHEMA,
+    Answer,
     Attempt,
     ExecutionRecord,
     ExecutionResult,
@@ -58,6 +61,13 @@ from .types import (
 log = logging.getLogger("sqlsentry")
 
 MAX_QUESTION_CHARS = 2000
+
+
+def _schema_only(datasource: str) -> ExecutionUnavailable:
+    return ExecutionUnavailable(
+        f"Datasource '{datasource}' is schema-only: SQL can be generated and validated but not run here. "
+        "Add a 'url' to its config to enable execution."
+    )
 
 
 class SQLSentry:
@@ -96,9 +106,12 @@ class SQLSentry:
             raise DataSourceNotFound(f"Unknown datasource '{name}'") from None
 
     def _db(self, name: str) -> Engine:
+        ds = self.datasource(name)
+        if not ds.url:
+            raise _schema_only(name)
         with self._lock:
             if name not in self._engines:
-                self._engines[name] = create_engine(self.datasource(name).url, pool_pre_ping=True)
+                self._engines[name] = create_engine(ds.url, pool_pre_ping=True)
             return self._engines[name]
 
     def schema(self, name: str) -> SchemaCatalog:
@@ -106,6 +119,11 @@ class SQLSentry:
         ds = self.datasource(name)
 
         def load() -> SchemaCatalog:
+            if ds.schema_file:
+                log.info("loading schema for datasource %s from %s", name, ds.schema_file)
+                return load_schema_file(
+                    ds.schema_file, datasource=name, dialect=ds.resolved_dialect, policy=ds.policy
+                )
             log.info("introspecting datasource %s", name)
             return introspect(
                 self._db(name),
@@ -187,7 +205,12 @@ class SQLSentry:
             schema_fingerprint=catalog.fingerprint(),
         )
         usage = Usage()
-        do_dry_run = self.settings.engine.dry_run and supports_dry_run(dialect)
+        do_dry_run = self.settings.engine.dry_run and ds.can_connect and supports_dry_run(dialect)
+        unverified_note = (
+            "Not verified against a database (schema-only datasource)."
+            if not ds.can_connect
+            else "Not verified against the database."
+        )
 
         for n in range(1, self.settings.engine.max_attempts + 1):
             result = llm.complete(prompt.system, messages, CANDIDATE_JSON_SCHEMA)
@@ -223,7 +246,7 @@ class SQLSentry:
             gen.explanation = cand.explanation
             gen.tables_used = guarded.tables
             gen.assumptions = cand.assumptions
-            gen.warnings = guarded.warnings + ([] if do_dry_run else ["Not verified against the database."])
+            gen.warnings = guarded.warnings + ([] if do_dry_run else [unverified_note])
             break
 
         gen.usage = usage
@@ -263,6 +286,34 @@ class SQLSentry:
             raise GenerationNotFound(f"Generation '{generation_id}' not found")
         return gen
 
+    def check_can_execute(self, datasource: str) -> DataSourceConfig:
+        """Raise unless SQL may run on this datasource (has a connection and policy allows it)."""
+        ds = self.datasource(datasource)
+        if not ds.can_connect:
+            raise _schema_only(datasource)
+        if not ds.policy.allow_execute:
+            raise PermissionDenied(f"Execution is disabled for datasource '{datasource}'.")
+        return ds
+
+    def ask(
+        self,
+        datasource: str,
+        question: str,
+        *,
+        consumer: str | None = None,
+        provider: str | None = None,
+        max_rows: int | None = None,
+    ) -> Answer:
+        """Batteries included: generate SQL and run it in one call.
+
+        Execution permission is checked *before* the model is called, so a request that can't
+        run never spends tokens. If the model asks for clarification, ``result`` is None.
+        """
+        self.check_can_execute(datasource)
+        gen = self.generate(datasource, question, consumer=consumer, provider=provider)
+        result = self.execute(gen, consumer=consumer, max_rows=max_rows) if gen.status == "ok" else None
+        return Answer(generation=gen, result=result)
+
     def execute(
         self,
         generation: Generation | str,
@@ -288,10 +339,9 @@ class SQLSentry:
         generation_id: str | None = None,
         consumer: str | None = None,
     ) -> ExecutionResult:
-        """Run SQL read-only. It is always re-checked against the *current* policy first."""
-        ds = self.datasource(datasource)
-        if not ds.policy.allow_execute:
-            raise PermissionDenied(f"Execution is disabled for datasource '{datasource}'.")
+        """Run SQL read-only: generated SQL, or SQL a user edited. Either way it is re-checked
+        against the *current* guard and policy first, so editing can't bypass anything."""
+        ds = self.check_can_execute(datasource)
         row_cap = min(max_rows, ds.policy.max_rows) if max_rows else ds.policy.max_rows
         guarded = check_sql(
             sql,

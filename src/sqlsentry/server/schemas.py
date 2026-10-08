@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from ..types import Generation
+from ..types import ExecutionResult, Generation
 
 
 class GenerateRequest(BaseModel):
@@ -48,7 +48,27 @@ class GenerateResponse(BaseModel):
 
 
 class ExecuteRequest(BaseModel):
-    generation_id: str
+    """Run either a previous generation (``generation_id``) or SQL you wrote or edited
+    (``datasource`` + ``sql``). Edited SQL goes through the same guard and policy."""
+
+    generation_id: str | None = None
+    datasource: str | None = None
+    sql: str | None = Field(None, min_length=1, max_length=50_000)
+    max_rows: int | None = Field(None, ge=1)
+
+    @model_validator(mode="after")
+    def _one_form(self) -> ExecuteRequest:
+        by_id = self.generation_id is not None
+        by_sql = self.datasource is not None or self.sql is not None
+        if by_id == by_sql or (by_sql and not (self.datasource and self.sql)):
+            raise ValueError("send either 'generation_id', or both 'datasource' and 'sql'")
+        return self
+
+
+class QueryRequest(BaseModel):
+    datasource: str
+    question: str = Field(min_length=1, max_length=2000)
+    provider: str | None = Field(None, description="LLM provider override (must be allowed by policy).")
     max_rows: int | None = Field(None, ge=1)
 
 
@@ -63,8 +83,16 @@ class FeedbackRequest(BaseModel):
     comment: str | None = Field(None, max_length=2000)
 
 
+class QueryResponse(GenerateResponse):
+    """A generation plus its rows. ``result`` is null when the model asked for clarification."""
+
+    result: ExecutionResult | None
+
+
 class DatasourceInfo(BaseModel):
     id: str
     description: str
     dialect: str
+    mode: Literal["connected", "schema_only"]
+    can_execute: bool
     scopes: list[str]

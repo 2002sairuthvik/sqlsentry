@@ -44,6 +44,12 @@ datasources:
           FROM orders
           WHERE status = 'cancelled'
 
+  # Schema-only datasource: SQL from a DDL file (e.g. `pg_dump --schema-only`) or an
+  # `sqlsentry export-context` bundle. sqlsentry never connects; you run the SQL yourself.
+  # warehouse:
+  #   schema_file: warehouse.sql
+  #   dialect: snowflake
+
 consumers:                      # API keys for `sqlsentry serve` (create with `sqlsentry hash-key`)
   - name: demo
     key_sha256: ["${SQLSENTRY_DEMO_KEY_SHA256:-}"]

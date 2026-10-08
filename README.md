@@ -40,6 +40,33 @@ customer_id  name          revenue
 
 <sub>Real output from `openai/gpt-oss-120b` on Groq's free tier against the sample database.</sub>
 
+## Two ways to use it
+
+| | **SQL only** | **Batteries included** |
+|---|---|---|
+| You give it | A schema: a `.sql` DDL file (e.g. `pg_dump --schema-only`), or a live connection | A live (read-only) database connection |
+| You get back | Commented SQL + explanation, which you review, edit and run yourself | SQL + explanation **and the rows** |
+| Database access | None needed with a schema file | Read-only, guarded, timed out, row-capped |
+| CLI | `sqlsentry ask warehouse "..."` | `sqlsentry ask store "..." --execute` |
+| API | `POST /v1/sql/generate` | `POST /v1/sql/query` |
+
+The fastest way to try it on your own database is to point sqlsentry at a schema file. Nothing connects to anything:
+
+```yaml
+datasources:
+  warehouse:
+    schema_file: warehouse.sql       # CREATE TABLE statements; comments become context for the model
+    dialect: snowflake
+    policy:
+      tables: {include: ["*"]}
+```
+
+```bash
+sqlsentry ask warehouse "monthly revenue for 2025"
+```
+
+Edited the generated SQL? Run your version with `POST /v1/sql/execute` (`{"datasource": ..., "sql": ...}`); it goes through the same guard and policy as generated SQL.
+
 ## Why sqlsentry
 
 Text-to-SQL is easy to demo and hard to trust. sqlsentry focuses on the trust part.
@@ -76,6 +103,8 @@ sqlsentry ask store "which category brings in the most revenue?" --execute
 sqlsentry validate store "SELECT email FROM customers"    # rejected: hidden column
 ```
 
+From a clone, `examples/sqlsentry.yaml` also has `store-schema`: the same store as a PostgreSQL DDL file, to try SQL-only mode (`sqlsentry ask store-schema "..." -c examples/sqlsentry.yaml`). To turn any connected datasource into a shareable schema file, run `sqlsentry export-context store -o store.schema.json`. The policy is applied, so hidden tables and columns are not in it.
+
 ### Open in GitHub Codespaces
 
 The repo includes a dev container: open it in a Codespace, add `GROQ_API_KEY` as a Codespaces secret, and everything is installed with the sample database ready.
@@ -86,14 +115,20 @@ The repo includes a dev container: open it in a Codespace, add `GROQ_API_KEY` as
 from sqlsentry import SQLSentry
 
 with SQLSentry.from_config("sqlsentry.yaml") as sentry:
+    # SQL only
     gen = sentry.generate("store", "how many orders are still pending?")
     if gen.status == "ok":
         print(gen.sql)
         print(gen.explanation)
-        result = sentry.execute(gen)  # only if the datasource policy allows execution
-        print(result.columns, result.rows)
     elif gen.status == "needs_clarification":
         print("Question:", gen.clarification_question)
+
+    # Batteries included: SQL + rows in one call (needs a connection and allow_execute)
+    answer = sentry.ask("store", "which category brings in the most revenue?")
+    print(answer.generation.sql, answer.result.rows if answer.result else None)
+
+    # Run SQL you edited: same guard and policy as generated SQL
+    result = sentry.execute_sql("store", "SELECT COUNT(*) FROM orders WHERE status = 'shipped'")
 ```
 
 ## Run the REST API
@@ -112,11 +147,12 @@ curl -s localhost:8000/v1/sql/generate \
 | Endpoint | Purpose |
 |---|---|
 | `POST /v1/sql/generate` | Question → SQL, explanation, assumptions (or a clarifying question) |
-| `POST /v1/sql/execute` | Run a generation's SQL read-only (scope + policy permitting) |
+| `POST /v1/sql/query` | Question → SQL + explanation + rows, in one call |
+| `POST /v1/sql/execute` | Run a generation (`generation_id`) or your own edited SQL (`datasource` + `sql`), read-only |
 | `POST /v1/sql/validate` | Check any SQL against the guard and policy |
 | `GET /v1/generations/{id}` | Fetch a past generation (yours only) |
 | `POST /v1/generations/{id}/feedback` | Mark correct/incorrect, submit corrected SQL |
-| `GET /v1/datasources` | Datasources your key can use |
+| `GET /v1/datasources` | Datasources your key can use, with their mode (`connected` / `schema_only`) |
 | `GET /v1/datasources/{id}/schema` | The policy-filtered schema |
 
 Each API key belongs to a consumer with per-datasource scopes (`generate`, `execute`, `validate`, `schema`). Datasources a key isn't granted return 404, exactly like ones that don't exist. There's a thin Python client in `sqlsentry.client`. Docker: `docker compose up` (see `docker-compose.yml`).
@@ -164,7 +200,6 @@ Small datasets swing by a question or two between runs, and your schema is not t
 
 v0.1 is in development. Planned next:
 
-- Upload mode: `sqlsentry export-context` to build a schema bundle inside a private network
 - Admin API for datasources, policies and keys
 - Row-level policy filters
 - Embedding-based schema linking for very large schemas

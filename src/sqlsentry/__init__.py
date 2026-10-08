@@ -3,11 +3,12 @@
 from .config import Settings
 from .engine import SQLSentry
 from .errors import SQLSentryError
-from .types import ExecutionResult, Feedback, Generation, ValidationResult
+from .types import Answer, ExecutionResult, Feedback, Generation, ValidationResult
 
 __version__ = "0.1.0.dev0"
 
 __all__ = [
+    "Answer",
     "ExecutionResult",
     "Feedback",
     "Generation",

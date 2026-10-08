@@ -28,7 +28,18 @@ class FewShotExample(BaseModel):
 
 
 class DataSourceConfig(BaseModel):
-    url: str = Field(description="SQLAlchemy URL. Use a read-only database user.")
+    """A database sqlsentry can generate SQL for.
+
+    * ``url`` only: connected mode (schema introspected live; SQL can be dry-run and executed).
+    * ``schema_file`` only: schema-only mode (SQL is generated and validated, never run).
+    * both: schema from the file, execution through the connection.
+    """
+
+    url: str | None = Field(None, description="SQLAlchemy URL. Use a read-only database user.")
+    schema_file: str | None = Field(
+        None,
+        description="DDL (.sql) or `sqlsentry export-context` bundle (.json); relative to the config file.",
+    )
     dialect: str | None = Field(None, description="sqlglot dialect; inferred from the URL if omitted.")
     description: str = ""
     db_schema: str | None = Field(None, description="Database schema/namespace to introspect.")
@@ -38,9 +49,25 @@ class DataSourceConfig(BaseModel):
     sample_values: int = Field(5, ge=0, le=50, description="Distinct sample values per text column.")
     llm: str | None = Field(None, description="Provider name override for this datasource.")
 
+    @model_validator(mode="after")
+    def _check_source(self) -> DataSourceConfig:
+        if not self.url and not self.schema_file:
+            raise ValueError("a datasource needs 'url' (connected) and/or 'schema_file' (schema-only)")
+        if not self.url and not self.dialect:
+            raise ValueError("schema-only datasources need an explicit 'dialect' (e.g. postgres)")
+        return self
+
     @property
     def resolved_dialect(self) -> str:
-        return self.dialect or dialect_from_url(self.url)
+        return self.dialect or dialect_from_url(self.url or "")
+
+    @property
+    def can_connect(self) -> bool:
+        return bool(self.url)
+
+    @property
+    def mode(self) -> str:
+        return "connected" if self.url else "schema_only"
 
 
 class ProviderConfig(BaseModel):
@@ -108,9 +135,13 @@ class Settings(BaseModel):
             raise ConfigError(f"Config file not found: {p}")
         raw = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
         try:
-            return cls.model_validate(expand_env(raw))
+            settings = cls.model_validate(expand_env(raw))
         except ValidationError as e:
             raise ConfigError(f"Invalid config {p}:\n{e}") from e
+        for ds in settings.datasources.values():
+            if ds.schema_file and not Path(ds.schema_file).is_absolute():
+                ds.schema_file = str((p.parent / ds.schema_file).resolve())
+        return settings
 
     @classmethod
     def load(cls, path: str | os.PathLike[str] | None = None) -> Settings:

@@ -22,7 +22,12 @@ def list_datasources(
             ds = s.datasource(name)
             out.append(
                 DatasourceInfo(
-                    id=name, description=ds.description, dialect=ds.resolved_dialect, scopes=sorted(scopes)
+                    id=name,
+                    description=ds.description,
+                    dialect=ds.resolved_dialect,
+                    mode=ds.mode,
+                    can_execute=ds.can_connect and ds.policy.allow_execute,
+                    scopes=sorted(scopes),
                 )
             )
     return out

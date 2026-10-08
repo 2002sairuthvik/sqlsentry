@@ -68,3 +68,5 @@ jobs:
           docker logs sqs; exit 1
       - name: Guard works inside the container
         run: docker exec sqs sqlsentry validate store "DELETE FROM orders" && exit 1 || true
+      - name: Schema-only datasource loads inside the container
+        run: docker exec sqs sqlsentry inspect store-schema | grep -q "TABLE customers"

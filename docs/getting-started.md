@@ -33,7 +33,27 @@ sqlsentry ask store "show customer emails"          # the model can't see emails
 sqlsentry validate store "DELETE FROM orders"       # rejected by the locked baseline
 ```
 
-## 5. Point it at your database
+## 5. Try it on your own schema, no connection needed
+
+Export your schema (e.g. `pg_dump --schema-only mydb > schema.sql`) and add:
+
+```yaml
+datasources:
+  mine:
+    schema_file: schema.sql
+    dialect: postgres
+    policy:
+      tables: {include: ["*"]}
+```
+
+```bash
+sqlsentry inspect mine
+sqlsentry ask mine "your question"
+```
+
+You get SQL to review and run yourself; sqlsentry never touches the database.
+
+## 6. Point it at your database
 
 Add a datasource with a **read-only** user, start with a narrow `tables.include`, hide sensitive
 columns, add a glossary and a few verified examples, then measure:
@@ -42,7 +62,7 @@ columns, add a glossary and a few verified examples, then measure:
 sqlsentry eval my_questions.yaml
 ```
 
-## 6. Serve it to other teams
+## 7. Serve it to other teams
 
 ```bash
 sqlsentry hash-key       # one key per consumer; put the digest under consumers:

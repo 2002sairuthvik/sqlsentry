@@ -22,7 +22,7 @@ flowchart LR
 | Module | Responsibility |
 |---|---|
 | `config.py`, `policy.py` | Settings, Layer 2 policy, consumers and grants |
-| `schema/` | Catalog model, introspection, TTL cache, schema linker |
+| `schema/` | Catalog model, live introspection, schema files (DDL / JSON bundles), TTL cache, schema linker |
 | `guard/` | `baseline.py` (Layer 1, locked) and `rules.py` (Layer 2) |
 | `prompts/` | System prompt and per-question prompt building |
 | `llm/` | Provider interface, OpenAI-compatible, Anthropic, fake, registry, response parsing |

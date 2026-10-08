@@ -47,10 +47,22 @@ class SQLSentryClient:
             body["provider"] = provider
         return self._call("POST", "/v1/sql/generate", json=body)
 
+    def query(
+        self, datasource: str, question: str, *, provider: str | None = None, max_rows: int | None = None
+    ) -> dict[str, Any]:
+        """Generate SQL and run it in one call; the response has the SQL plus ``result``."""
+        body = {"datasource": datasource, "question": question, "provider": provider, "max_rows": max_rows}
+        return self._call("POST", "/v1/sql/query", json=body)
+
     def execute(self, generation_id: str, *, max_rows: int | None = None) -> dict[str, Any]:
         return self._call(
             "POST", "/v1/sql/execute", json={"generation_id": generation_id, "max_rows": max_rows}
         )
+
+    def execute_sql(self, datasource: str, sql: str, *, max_rows: int | None = None) -> dict[str, Any]:
+        """Run SQL you wrote or edited; it is still checked by the guard and policy."""
+        body = {"datasource": datasource, "sql": sql, "max_rows": max_rows}
+        return self._call("POST", "/v1/sql/execute", json=body)
 
     def validate(self, datasource: str, sql: str) -> dict[str, Any]:
         return self._call("POST", "/v1/sql/validate", json={"datasource": datasource, "sql": sql})

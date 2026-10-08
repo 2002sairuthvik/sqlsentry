@@ -101,6 +101,13 @@ class ExecutionResult(BaseModel):
     duration_ms: int
 
 
+class Answer(BaseModel):
+    """Result of ``SQLSentry.ask``: the generation plus its rows (None if clarification is needed)."""
+
+    generation: Generation
+    result: ExecutionResult | None = None
+
+
 class ExecutionRecord(BaseModel):
     """What is stored about an execution. Never the rows."""
 

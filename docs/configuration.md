@@ -31,7 +31,8 @@ See [providers.md](providers.md) for ready-made provider blocks.
 datasources:
   store:
     url: sqlite:///store.db     # any SQLAlchemy URL; use a read-only user
-    dialect: sqlite             # optional; inferred from the URL
+    schema_file: null           # .sql DDL or .json bundle, relative to this config file
+    dialect: sqlite             # inferred from the URL; required when there is no url
     db_schema: public           # optional schema/namespace to introspect
     description: ...            # shown to the model
     sample_values: 5            # distinct sample values per visible text column (0 = none)
@@ -52,6 +53,19 @@ datasources:
       - question: How many orders were cancelled?
         sql: SELECT COUNT(*) FROM orders WHERE status = 'cancelled'
 ```
+
+### Connected vs schema-only
+
+| `url` | `schema_file` | Mode | Generate / validate | Dry-run + execute |
+|---|---|---|---|---|
+| set | not set | connected: schema introspected live | yes | yes (if `allow_execute`) |
+| not set | set | **schema-only**: schema read from the file | yes | no (`409 execution_unavailable`) |
+| set | set | schema from the file, execution through the connection | yes | yes (if `allow_execute`) |
+
+`schema_file` accepts plain DDL (`pg_dump --schema-only`, `mysqldump --no-data`, hand-written
+`CREATE TABLE`s; keys and `COMMENT`s are used) or a JSON bundle from
+`sqlsentry export-context <datasource>`. The policy applies to schema files exactly as it does to
+live databases.
 
 ## `consumers` (REST API)
 

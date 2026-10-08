@@ -49,12 +49,25 @@ datasources:
           FROM orders
           WHERE status = 'cancelled'
 
+  store-schema:                 # schema-only: generates SQL from a DDL file, never connects to a database
+    schema_file: store_schema.sql   # relative to this config file (or a JSON from `sqlsentry export-context`)
+    dialect: postgres
+    description: The same store, as PostgreSQL DDL. Returns SQL only; run it yourself.
+    policy:
+      tables: {include: ["*"], exclude: ["internal_*"]}
+      columns: {hidden: ["customers.email"]}
+    glossary:
+      - "revenue = SUM(order_items.quantity * order_items.unit_price)"
+      - "Sales only count orders with status 'delivered' or 'shipped'; 'cancelled' orders never count."
+
 consumers:                      # API keys for `sqlsentry serve` (create with `sqlsentry hash-key`)
   - name: demo
     key_sha256: ["${SQLSENTRY_DEMO_KEY_SHA256:-}"]
     grants:
       - datasource: store
         scopes: [generate, execute, validate, schema]
+      - datasource: store-schema
+        scopes: [generate, validate, schema]
 
 server:
   auth_enabled: true

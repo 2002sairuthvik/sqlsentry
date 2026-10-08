@@ -6,7 +6,8 @@ sqlsentry ask store "top 5 customers by revenue" --execute
 sqlsentry validate store "SELECT * FROM customers"
 sqlsentry serve                      # REST API on http://127.0.0.1:8000 (docs at /docs)
 sqlsentry eval evals/datasets/sample_store.yaml
-sqlsentry hash-key                   # new API key + the digest to put in the config
+sqlsentry export-context store -o store.schema.json   # schema file for SQL-only use elsewhere
+sqlsentry hash-key                  # new API key + the digest to put in the config
 """
 
 from __future__ import annotations
@@ -78,7 +79,9 @@ def cmd_inspect(args) -> int:
     sentry = _sentry(args)
     ds = sentry.datasource(args.datasource)
     catalog = sentry.schema(args.datasource)
-    print(f"# {args.datasource} ({ds.resolved_dialect}) - what the model can see\n")
+    source = f"schema file {ds.schema_file}" if ds.schema_file else "live database"
+    print(f"# {args.datasource} ({ds.resolved_dialect}, {ds.mode.replace('_', '-')}, from {source})")
+    print("# This is exactly what the model can see.\n")
     print(render_schema(catalog) or "(no tables visible - check policy.tables.include)")
     p = ds.policy
     print(
@@ -90,10 +93,34 @@ def cmd_inspect(args) -> int:
     return 0
 
 
+def cmd_export_context(args) -> int:
+    """Write the policy-filtered schema of a datasource to a JSON bundle.
+
+    Run it inside the network that can reach the database; the bundle then works as a
+    schema-only datasource anywhere (``schema_file: bundle.json``) without database access.
+    """
+    sentry = _sentry(args)
+    catalog = sentry.schema(args.datasource)
+    out = Path(args.output or f"{args.datasource}.schema.json")
+    out.write_text(catalog.model_dump_json(indent=2), encoding="utf-8")
+    hidden = sentry.datasource(args.datasource).policy.columns.hidden
+    print(f"Wrote {out} ({len(catalog.tables)} tables). The policy was applied: hidden data is not in it.")
+    if hidden:
+        print(f"Hidden columns left out: {', '.join(hidden)}")
+    print(f"Use it as:  schema_file: {out.name}   (plus an explicit dialect) in sqlsentry.yaml")
+    return 0
+
+
 def cmd_ask(args) -> int:
     sentry = _sentry(args)
-    gen = sentry.generate(args.datasource, args.question, provider=args.provider, consumer="cli")
-    result = sentry.execute(gen, max_rows=args.max_rows) if args.execute and gen.status == "ok" else None
+    if args.execute:
+        answer = sentry.ask(
+            args.datasource, args.question, provider=args.provider, consumer="cli", max_rows=args.max_rows
+        )
+        gen, result = answer.generation, answer.result
+    else:
+        gen = sentry.generate(args.datasource, args.question, provider=args.provider, consumer="cli")
+        result = None
     if args.json:
         out = {"generation": gen.model_dump(mode="json")}
         if result:
@@ -208,6 +235,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("datasource")
     sp.add_argument("sql")
     sp.set_defaults(func=cmd_validate)
+
+    sp = with_config(sub.add_parser("export-context", help="save a datasource's filtered schema to a file"))
+    sp.add_argument("datasource")
+    sp.add_argument("-o", "--output", help="output file (default: <datasource>.schema.json)")
+    sp.set_defaults(func=cmd_export_context)
 
     sp = with_config(sub.add_parser("serve", help="run the REST API"))
     sp.add_argument("--host", default="127.0.0.1")
