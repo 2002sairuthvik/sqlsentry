@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
 from ..types import Usage
+
+_DAILY_LIMIT = re.compile(r"per day|(TPD|RPD)|daily", re.IGNORECASE)
+
+
+def is_daily_limit(message: str) -> bool:
+    """True for per-day quota errors (e.g. Groq's 'tokens per day (TPD)'), where waiting a few
+    seconds or minutes can't help, unlike per-minute rate limits."""
+    return _DAILY_LIMIT.search(message or "") is not None
+
 
 Message = dict[str, str]  # {"role": "user" | "assistant", "content": "..."}
 

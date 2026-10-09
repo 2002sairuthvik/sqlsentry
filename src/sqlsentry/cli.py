@@ -178,7 +178,13 @@ def cmd_serve(args) -> int:
 def cmd_eval(args) -> int:
     from .evals import format_report, run_eval
 
-    report = run_eval(_sentry(args), args.dataset, provider=args.provider)
+    report = run_eval(
+        _sentry(args),
+        args.dataset,
+        provider=args.provider,
+        rate_limit_retries=args.rate_limit_retries,
+        pace_s=args.pace,
+    )
     if args.json:
         print(report.model_dump_json(indent=2))
     else:
@@ -251,6 +257,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--provider")
     sp.add_argument("--json", action="store_true")
     sp.add_argument("--min-accuracy", type=float, default=0.0, help="exit 1 below this (0-1), for CI")
+    sp.add_argument(
+        "--rate-limit-retries", type=int, default=3, help="retries per question after HTTP 429 (default 3)"
+    )
+    sp.add_argument("--pace", type=float, default=0.0, help="seconds to wait between questions (free tiers)")
     sp.set_defaults(func=cmd_eval)
 
     sp = sub.add_parser("hash-key", help="generate an API key and its digest")

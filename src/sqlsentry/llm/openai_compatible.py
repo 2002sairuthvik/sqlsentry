@@ -8,6 +8,7 @@ there is no vendor SDK dependency.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any
 
@@ -16,7 +17,7 @@ import httpx
 from ..config import ProviderConfig
 from ..errors import ConfigError, LLMError
 from ..types import Usage
-from .base import LLMProvider, LLMResult, Message
+from .base import LLMProvider, LLMResult, Message, is_daily_limit
 
 log = logging.getLogger(__name__)
 
@@ -85,14 +86,20 @@ class OpenAICompatibleProvider(LLMProvider):
                 self._json_mode = False
                 body = {k: v for k, v in body.items() if k != "response_format"}
                 continue
-            if resp.status_code in _RETRYABLE and attempt < self.cfg.max_retries:
+            daily_cap = resp.status_code == 429 and is_daily_limit(_error_text(resp))
+            if resp.status_code in _RETRYABLE and attempt < self.cfg.max_retries and not daily_cap:
                 attempt += 1
-                time.sleep(_retry_after(resp) or min(2**attempt, _MAX_BACKOFF_S))
+                hint = retry_after_seconds(resp)
+                time.sleep(min(hint, _MAX_BACKOFF_S) if hint else min(2**attempt, _MAX_BACKOFF_S))
                 continue
             if resp.status_code >= 400:
+                details: dict[str, Any] = {"status": resp.status_code}
+                hint = retry_after_seconds(resp)
+                if hint is not None:
+                    details["retry_after_s"] = hint
                 raise LLMError(
                     f"Provider '{self.name}' returned HTTP {resp.status_code}: {_error_text(resp)}",
-                    details={"status": resp.status_code},
+                    details=details,
                 )
             return resp.json()
 
@@ -100,11 +107,24 @@ class OpenAICompatibleProvider(LLMProvider):
         self._client.close()
 
 
-def _retry_after(resp: httpx.Response) -> float | None:
+_TRY_AGAIN = re.compile(r"try again in\s+(?:(\d+)h)?(?:(\d+)m(?!s))?(?:([\d.]+)(ms|s))?", re.IGNORECASE)
+
+
+def retry_after_seconds(resp: httpx.Response) -> float | None:
+    """How long the server asked us to wait: the Retry-After header, or a hint in the error
+    message such as Groq's "Please try again in 7.5s" / "in 1m2.5s" / "in 450ms"."""
     try:
-        return min(float(resp.headers.get("retry-after", "")), _MAX_BACKOFF_S)
+        return max(float(resp.headers.get("retry-after", "")), 0.0)
     except ValueError:
+        pass
+    m = _TRY_AGAIN.search(_error_text(resp))
+    if not m or not any(m.groups()):
         return None
+    hours, minutes, amount, unit = m.groups()
+    seconds = float(hours or 0) * 3600 + float(minutes or 0) * 60
+    if amount:
+        seconds += float(amount) / (1000 if unit.lower() == "ms" else 1)
+    return seconds
 
 
 def _error_text(resp: httpx.Response) -> str:

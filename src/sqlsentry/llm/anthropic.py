@@ -57,7 +57,12 @@ class AnthropicProvider(LLMProvider):
             else:
                 resp = self._client.messages.create(**kwargs)
         except a.RateLimitError as e:
-            raise LLMError(f"Provider '{self.name}' is rate limited", details={"status": 429}) from e
+            details: dict[str, Any] = {"status": 429}
+            try:
+                details["retry_after_s"] = float(e.response.headers.get("retry-after", ""))
+            except (AttributeError, ValueError):
+                pass
+            raise LLMError(f"Provider '{self.name}' is rate limited", details=details) from e
         except a.APIStatusError as e:
             raise LLMError(f"Provider '{self.name}' returned HTTP {e.status_code}: {e.message}") from e
         except a.APIConnectionError as e:

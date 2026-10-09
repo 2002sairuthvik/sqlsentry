@@ -27,3 +27,7 @@ All notable changes to this project are documented here. The format follows
 - System prompt: rule against join fan-out (count parents with DISTINCT; aggregate per parent first).
 - Example glossary: revenue/sales rule is now explicitly scoped so it doesn't filter general order questions.
 - Eval dataset: 30 questions, including 5 new join fan-out traps.
+- Eval waits out rate limits (HTTP 429) using the provider's retry hint and retries the question
+  (`--rate-limit-retries`, default 3); still-limited questions are reported as `rate_limited`, not
+  as wrong answers. New `--pace` option. Latency now measures generation only.
+- LLM errors carry the provider's `retry_after_s` hint (Retry-After header or "try again in Xs").
