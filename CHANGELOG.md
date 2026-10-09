@@ -31,3 +31,5 @@ All notable changes to this project are documented here. The format follows
   (`--rate-limit-retries`, default 3); still-limited questions are reported as `rate_limited`, not
   as wrong answers. New `--pace` option. Latency now measures generation only.
 - LLM errors carry the provider's `retry_after_s` hint (Retry-After header or "try again in Xs").
+- Daily quota errors (e.g. Groq TPD) stop the eval immediately instead of retrying, and the
+  OpenAI-compatible provider no longer spends its own retries on them.
