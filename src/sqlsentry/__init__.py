@@ -5,7 +5,7 @@ from .engine import SQLSentry
 from .errors import SQLSentryError
 from .types import Answer, ExecutionResult, Feedback, Generation, ValidationResult
 
-__version__ = "0.1.0.dev0"
+__version__ = "0.1.0"
 
 __all__ = [
     "Answer",

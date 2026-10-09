@@ -1,5 +1,8 @@
 # sqlsentry
 
+[![CI](https://github.com/2002sairuthvik/sqlsentry/actions/workflows/ci.yml/badge.svg)](https://github.com/2002sairuthvik/sqlsentry/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 **Safety-first, model-agnostic natural language to SQL.**
 Ask a question in plain English, get back commented SQL and an explanation of what it does.
 Optionally run it read-only and get the rows. Use it as a Python library, a CLI, or a REST API.
@@ -85,7 +88,7 @@ Text-to-SQL is easy to demo and hard to trust. sqlsentry focuses on the trust pa
 ## Quickstart
 
 ```bash
-pip install "sqlsentry[server]"      # until the first PyPI release: pip install -e ".[server]" from a clone
+pip install "sqlsentry[server] @ git+https://github.com/2002sairuthvik/sqlsentry@v0.1.0"   # PyPI release coming later
 mkdir demo && cd demo
 sqlsentry init                       # creates sqlsentry.yaml + a fictional sample store database
 ```
@@ -199,7 +202,7 @@ Small datasets swing by a question or two between runs, and your schema is not t
 
 ## Project status and roadmap
 
-v0.1 is in development. Planned next:
+v0.1.0 is the first release. Feedback and contributions are welcome. Planned next:
 
 - Admin API for datasources, policies and keys
 - Row-level policy filters

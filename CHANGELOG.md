@@ -6,13 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-09
+
 ### Added
 - Core engine: schema introspection, schema linking, prompt building, repair loop.
 - Two-layer SQL guard: locked read-only baseline + configurable policy.
 - Model-agnostic LLM layer: OpenAI-compatible (Groq, Ollama, vLLM, OpenAI, ...), Anthropic, and a fake provider for tests.
 - REST API with API keys, per-datasource grants and rate limiting.
-- CLI: `init`, `inspect`, `ask`, `validate`, `serve`, `eval`, `hash-key`, `sample-db`.
-- Eval harness comparing result sets, plus a 25-question golden dataset for the sample store.
+- CLI: `init`, `inspect`, `ask`, `validate`, `serve`, `eval`, `export-context`, `hash-key`, `sample-db`.
+- Eval harness comparing result sets, plus a 30-question golden dataset for the sample store.
 - Docker image and compose file (Groq by default, optional local Ollama profile).
 - Docs: getting started, configuration, providers, security model, architecture.
 - Two ways to use it: SQL only, or batteries included (SQL + rows).

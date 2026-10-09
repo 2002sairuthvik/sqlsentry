@@ -3,7 +3,7 @@
 ## 1. Install
 
 ```bash
-pip install "sqlsentry[server]"
+pip install "sqlsentry[server] @ git+https://github.com/2002sairuthvik/sqlsentry@v0.1.0"
 ```
 
 From a clone instead: `pip install -e ".[dev]"`. Or open the repo in GitHub Codespaces, where
