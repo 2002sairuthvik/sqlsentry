@@ -343,22 +343,21 @@ class SQLSentry:
         against the *current* guard and policy first, so editing can't bypass anything."""
         ds = self.check_can_execute(datasource)
         row_cap = min(max_rows, ds.policy.max_rows) if max_rows else ds.policy.max_rows
-        guarded = check_sql(
-            sql,
-            catalog=self.schema(datasource),
-            policy=ds.policy,
-            dialect=ds.resolved_dialect,
-            max_rows=row_cap,
-        )
+        guard_args = dict(catalog=self.schema(datasource), policy=ds.policy, dialect=ds.resolved_dialect)
+        shown = check_sql(sql, max_rows=row_cap, **guard_args)
+        # Run with one row of headroom so a cut-off result is detected; only row_cap rows are returned.
+        probe = check_sql(sql, max_rows=row_cap, probe_extra_row=True, **guard_args)
         columns, rows, truncated, ms = run_query(
             self._db(datasource),
-            guarded.sql,
+            probe.sql,
             dialect=ds.resolved_dialect,
             timeout_s=ds.policy.timeout_s,
             max_rows=row_cap,
         )
         result = ExecutionResult(
             generation_id=generation_id,
+            sql=shown.sql,
+            warnings=shown.warnings,
             columns=columns,
             rows=rows,
             row_count=len(rows),

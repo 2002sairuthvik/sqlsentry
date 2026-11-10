@@ -11,7 +11,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "Sai Ruthvik" }]
-keywords = ["nl2sql", "text-to-sql", "llm", "sql", "database", "guardrails"]
+keywords = ["nl2sql", "text-to-sql", "llm", "sql", "database", "guardrails", "mcp", "ai-agents"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -32,9 +32,11 @@ server = ["fastapi>=0.115", "uvicorn>=0.30"]
 anthropic = ["anthropic>=1.9"]
 postgres = ["psycopg[binary]>=3.1"]
 mysql = ["pymysql>=1.1"]
+mcp = ["mcp>=2.3,<3"]
 dev = [
     "pytest>=8",
     "anthropic>=1.9",
+    "mcp>=2.3,<3",
     "ruff>=0.6",
     "fastapi>=0.115",
     "uvicorn>=0.30",
@@ -42,6 +44,7 @@ dev = [
 
 [project.scripts]
 sqlsentry = "sqlsentry.cli:main"
+sqlsentry-mcp = "sqlsentry.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/2002sairuthvik/sqlsentry"

@@ -138,15 +138,35 @@ class Settings(BaseModel):
             settings = cls.model_validate(expand_env(raw))
         except ValidationError as e:
             raise ConfigError(f"Invalid config {p}:\n{e}") from e
+        # Every relative path in the file is relative to the file itself, not to the current
+        # directory: MCP clients and services start sqlsentry from unpredictable directories.
+        base = p.resolve().parent
         for ds in settings.datasources.values():
             if ds.schema_file and not Path(ds.schema_file).is_absolute():
-                ds.schema_file = str((p.parent / ds.schema_file).resolve())
+                ds.schema_file = str((base / ds.schema_file).resolve())
+            if ds.url:
+                ds.url = resolve_sqlite_url(ds.url, base)
+        if settings.store.url:
+            settings.store.url = resolve_sqlite_url(settings.store.url, base)
         return settings
 
     @classmethod
     def load(cls, path: str | os.PathLike[str] | None = None) -> Settings:
         """Load from ``path``, else ``$SQLSENTRY_CONFIG``, else ``./sqlsentry.yaml``."""
         return cls.from_yaml(path or os.environ.get("SQLSENTRY_CONFIG", "sqlsentry.yaml"))
+
+
+def resolve_sqlite_url(url: str, base: Path) -> str:
+    """Make a relative SQLite file path absolute against ``base``; other URLs are unchanged."""
+    if not url.lower().startswith("sqlite"):
+        return url
+    from sqlalchemy.engine import make_url
+
+    u = make_url(url)
+    db = u.database
+    if not db or db == ":memory:" or db.startswith("file:") or Path(db).is_absolute():
+        return url
+    return u.set(database=(base / db).resolve().as_posix()).render_as_string(hide_password=False)
 
 
 _URL_DIALECTS = {

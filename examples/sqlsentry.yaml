@@ -25,7 +25,7 @@ llm:
 
 datasources:
   store:
-    url: sqlite:///examples/store.db   # run from the repo root; use a read-only user for real DBs
+    url: sqlite:///store.db     # relative to this file; use a read-only user for real DBs
     description: Fictional online store with customers, products, orders and order items.
     policy:
       tables:

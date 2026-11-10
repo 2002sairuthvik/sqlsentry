@@ -28,11 +28,18 @@ def check_sql(
     policy: Policy,
     dialect: str,
     max_rows: int | None = None,
+    probe_extra_row: bool = False,
 ) -> GuardResult:
     """Return safe, policy-compliant SQL in ``dialect`` or raise
-    :class:`~sqlsentry.errors.UnsafeSQLError` / :class:`~sqlsentry.errors.InvalidSQLError`."""
+    :class:`~sqlsentry.errors.UnsafeSQLError` / :class:`~sqlsentry.errors.InvalidSQLError`.
+
+    ``probe_extra_row`` is for execution only: the LIMIT allows one row more than the cap so the
+    executor can tell whether results were truncated. Callers never return that extra row.
+    """
     catalog = catalog.filtered(policy)  # defence in depth: never trust the caller's catalog
     row_cap = min(max_rows, policy.max_rows) if max_rows else policy.max_rows
+    if probe_extra_row:
+        row_cap += 1
 
     stmt = parse_single(sql, dialect)
     check_baseline(stmt)

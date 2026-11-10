@@ -94,10 +94,12 @@ class Generation(BaseModel):
 class ExecutionResult(BaseModel):
     id: str = Field(default_factory=lambda: new_id("exe"))
     generation_id: str | None = None
+    sql: str | None = Field(None, description="The query as run, after the guard's rewrites")
+    warnings: list[str] = Field(default_factory=list)
     columns: list[str]
     rows: list[list[Any]]
     row_count: int
-    truncated: bool
+    truncated: bool = Field(description="True if more rows exist than were returned")
     duration_ms: int
 
 
