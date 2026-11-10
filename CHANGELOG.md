@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-10
+
+First release on PyPI: `pip install sqlsentry`.
+
+### Changed
+- Release workflow publishes to PyPI with trusted publishing (no stored tokens), after checking the
+  tag matches the version and smoke-testing the built wheel in a clean environment.
+- README links are absolute so they work on PyPI as well as GitHub.
+- Build requires setuptools >= 77 (needed for the SPDX license field).
+- CI actions updated (`actions/checkout` v7, `actions/setup-python` v7).
+
 ## [0.1.0] - 2026-10-09
 
 ### Added

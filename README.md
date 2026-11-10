@@ -1,7 +1,7 @@
 # sqlsentry
 
 [![CI](https://github.com/2002sairuthvik/sqlsentry/actions/workflows/ci.yml/badge.svg)](https://github.com/2002sairuthvik/sqlsentry/actions/workflows/ci.yml)
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/2002sairuthvik/sqlsentry/blob/main/LICENSE)
 
 **Safety-first, model-agnostic natural language to SQL.**
 Ask a question in plain English, get back commented SQL and an explanation of what it does.
@@ -88,7 +88,7 @@ Text-to-SQL is easy to demo and hard to trust. sqlsentry focuses on the trust pa
 ## Quickstart
 
 ```bash
-pip install "sqlsentry[server] @ git+https://github.com/2002sairuthvik/sqlsentry@v0.1.0"   # PyPI release coming later
+pip install "sqlsentry[server]"
 mkdir demo && cd demo
 sqlsentry init                       # creates sqlsentry.yaml + a fictional sample store database
 ```
@@ -179,7 +179,7 @@ datasources:
         sql: "SELECT SUM(total) FROM orders WHERE ..."
 ```
 
-See [docs/configuration.md](docs/configuration.md) for every option and [docs/security-model.md](docs/security-model.md) for what is and isn't guaranteed.
+See [docs/configuration.md](https://github.com/2002sairuthvik/sqlsentry/blob/main/docs/configuration.md) for every option and [docs/security-model.md](https://github.com/2002sairuthvik/sqlsentry/blob/main/docs/security-model.md) for what is and isn't guaranteed.
 
 ## Measuring accuracy
 
@@ -212,8 +212,8 @@ v0.1.0 is the first release. Feedback and contributions are welcome. Planned nex
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](https://github.com/2002sairuthvik/sqlsentry/blob/main/CONTRIBUTING.md). Security reports: [SECURITY.md](https://github.com/2002sairuthvik/sqlsentry/blob/main/SECURITY.md).
 
 ## License
 
-[Apache 2.0](LICENSE)
+[Apache 2.0](https://github.com/2002sairuthvik/sqlsentry/blob/main/LICENSE)
