@@ -94,4 +94,8 @@ def create_app(sentry: SQLSentry | None = None, settings: Settings | None = None
 
     for router in (health.router, sql.router, generations.router, datasources.router):
         app.include_router(router)
+    if cfg.server.playground.enabled:
+        from .playground import install
+
+        install(app, sentry)
     return app

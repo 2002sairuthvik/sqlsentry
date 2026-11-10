@@ -40,6 +40,9 @@ class DataSourceConfig(BaseModel):
         None,
         description="DDL (.sql) or `sqlsentry export-context` bundle (.json); relative to the config file.",
     )
+    schema_ddl: str | None = Field(
+        None, description="Inline DDL (CREATE TABLE ...) instead of a schema file."
+    )
     dialect: str | None = Field(None, description="sqlglot dialect; inferred from the URL if omitted.")
     description: str = ""
     db_schema: str | None = Field(None, description="Database schema/namespace to introspect.")
@@ -51,8 +54,12 @@ class DataSourceConfig(BaseModel):
 
     @model_validator(mode="after")
     def _check_source(self) -> DataSourceConfig:
-        if not self.url and not self.schema_file:
-            raise ValueError("a datasource needs 'url' (connected) and/or 'schema_file' (schema-only)")
+        if not self.url and not self.schema_file and not self.schema_ddl:
+            raise ValueError(
+                "a datasource needs 'url' (connected) and/or 'schema_file' / 'schema_ddl' (schema-only)"
+            )
+        if self.schema_file and self.schema_ddl:
+            raise ValueError("use either 'schema_file' or 'schema_ddl', not both")
         if not self.url and not self.dialect:
             raise ValueError("schema-only datasources need an explicit 'dialect' (e.g. postgres)")
         return self
@@ -107,10 +114,29 @@ class EngineSettings(BaseModel):
     schema_cache_ttl_s: int = Field(600, ge=0)
 
 
+class PlaygroundSettings(BaseModel):
+    """The browser playground at /playground. Off by default; it needs no API key, so it has its
+    own per-visitor rate limit and only exposes the datasources listed here."""
+
+    enabled: bool = False
+    datasources: list[str] = Field(default_factory=list, description="Shown in the playground; empty = all.")
+    allow_custom_schema: bool = Field(True, description="Visitors may paste DDL (never executed).")
+    custom_schema_max_chars: int = Field(50_000, ge=1000)
+    requests_per_minute: int = Field(10, ge=0, description="Per visitor IP. 0 disables.")
+    max_rows: int = Field(50, ge=1)
+    sample_questions: dict[str, list[str]] = Field(
+        default_factory=dict, description="Clickable example questions per datasource."
+    )
+    trust_proxy_headers: bool = Field(
+        False, description="Use X-Forwarded-For for the visitor IP (enable only behind a trusted proxy)."
+    )
+
+
 class ServerSettings(BaseModel):
     auth_enabled: bool = True
     rate_limit_per_minute: int = Field(60, ge=0, description="Per consumer. 0 disables.")
     cors_origins: list[str] = Field(default_factory=list)
+    playground: PlaygroundSettings = Field(default_factory=PlaygroundSettings)
 
 
 class StoreSettings(BaseModel):

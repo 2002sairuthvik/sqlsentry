@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sqlsentry playground</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 7v8c0 7.5 5.1 13.6 12 15 6.9-1.4 12-7.5 12-15V7z' fill='%232f5bea'/%3E%3Cpath d='m10.5 16 4 4 7-8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="description" content="Ask a database a question in plain English and get guarded, read-only SQL.">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6573; --border: #dde1e6;
+    --accent: #2f5bea; --accent-ink: #ffffff; --code-bg: #f1f3f6;
+    --ok: #157f3b; --ok-bg: #e7f6ec; --bad: #b42318; --bad-bg: #fdecea; --warn: #8a5a00; --warn-bg: #fff6e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --card: #171a21; --text: #e6e8eb; --muted: #9aa3af; --border: #2a2f3a;
+      --accent: #6b8cff; --accent-ink: #0f1115; --code-bg: #10131a;
+      --ok: #4ade80; --ok-bg: #0f2a1a; --bad: #f87171; --bad-bg: #2d1414; --warn: #fbbf24; --warn-bg: #2b2210;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.02em; }
+  .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  header nav { margin-left: auto; display: flex; gap: 14px; font-size: 14px; }
+  a { color: var(--accent); }
+  .lead { color: var(--muted); margin: 6px 0 16px; max-width: 760px; }
+  .notice { font-size: 13px; color: var(--warn); background: var(--warn-bg); border-radius: 8px; padding: 8px 12px; margin-bottom: 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .card h2 { font-size: 16px; margin: 0 0 12px; }
+  .card h2 .step { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+  .seg button { border: 0; background: transparent; color: var(--text); padding: 7px 14px; cursor: pointer; font: inherit; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+  select, input[type=text], textarea {
+    width: 100%; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; }
+  textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; resize: vertical; }
+  select:focus, input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .row > .grow { flex: 1 1 260px; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px;
+                   padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+                 padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  button:disabled { opacity: 0.6; cursor: progress; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chips button { font-size: 13px; }
+  details { margin-top: 10px; } summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+        overflow: auto; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 8px 0; white-space: pre; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .status { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+  .status.ok { color: var(--ok); background: var(--ok-bg); } .status.bad { color: var(--bad); background: var(--bad-bg); }
+  .status.warn { color: var(--warn); background: var(--warn-bg); }
+  .error { color: var(--bad); background: var(--bad-bg); border-radius: 8px; padding: 10px 12px; margin-top: 10px; white-space: pre-wrap; }
+  ul.notes { margin: 6px 0; padding-left: 18px; } ul.notes li { font-size: 13px; color: var(--muted); }
+  .sqlhead { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 8px; }
+  .tablewrap { overflow: auto; max-height: 360px; border: 1px solid var(--border); border-radius: 8px; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { position: sticky; top: 0; background: var(--card); }
+  .hidden { display: none !important; }
+  footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 24px; }
+  @media (max-width: 600px) { header nav { margin-left: 0; width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>sqlsentry</h1><span class="pill">playground</span>
+    <nav>
+      <a href="https://github.com/2002sairuthvik/sqlsentry" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/2002sairuthvik/sqlsentry/blob/main/docs/getting-started.md" target="_blank" rel="noopener">Docs</a>
+    </nav>
+  </header>
+  <p class="lead">Ask a database a question in plain English. You get commented SQL and an explanation, and on the
+    sample database the rows too. Every query passes a read-only guard first.</p>
+  <div class="notice" id="notice">Questions and pasted schemas are sent to an AI model to write SQL. Don't paste confidential schemas. Nothing is saved.</div>
+
+  <section class="card" aria-labelledby="h-schema">
+    <h2 id="h-schema"><span class="step">1</span>Choose a schema</h2>
+    <div class="seg" role="group" aria-label="Schema source">
+      <button type="button" id="mode-sample" aria-pressed="true">Sample database</button>
+      <button type="button" id="mode-custom" aria-pressed="false">Paste your schema</button>
+    </div>
+
+    <div id="sample-pane">
+      <label for="ds">Database</label>
+      <select id="ds"></select>
+      <p class="muted" id="ds-desc"></p>
+      <p class="muted" id="ds-hidden"></p>
+      <details><summary>What the model can see</summary><pre id="ds-schema"></pre></details>
+    </div>
+
+    <div id="custom-pane" class="hidden">
+      <div class="row">
+        <div style="flex: 0 0 180px">
+          <label for="dialect">SQL dialect</label>
+          <select id="dialect">
+            <option>postgres</option><option>mysql</option><option>sqlite</option><option>tsql</option>
+            <option>snowflake</option><option>bigquery</option><option>duckdb</option><option>oracle</option>
+            <option>redshift</option><option>trino</option><option>databricks</option><option>clickhouse</option>
+          </select>
+        </div>
+      </div>
+      <label for="ddl" style="margin-top:10px">CREATE TABLE statements (for example from <code>pg_dump --schema-only</code>)</label>
+      <textarea id="ddl" rows="9" spellcheck="false" placeholder="CREATE TABLE customers (
+  id integer PRIMARY KEY,
+  name text,
+  country text
+);
+CREATE TABLE orders (
+  id integer PRIMARY KEY,
+  customer_id integer REFERENCES customers(id),
+  total numeric(10,2),
+  created_at date
+);"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button type="button" class="ghost" id="ddl-check">Check schema</button>
+        <span class="muted">Pasted schemas are never executed. You get SQL to run yourself.</span>
+      </div>
+      <p class="muted" id="ddl-result"></p>
+      <details id="ddl-details" class="hidden"><summary>How sqlsentry understood it</summary><pre id="ddl-schema"></pre></details>
+      <div class="error hidden" id="ddl-error"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-ask">
+    <h2 id="h-ask"><span class="step">2</span>Ask a question</h2>
+    <form id="ask-form" class="row">
+      <div class="grow"><label for="question">Question</label>
+        <input type="text" id="question" maxlength="500" autocomplete="off" placeholder="e.g. Which product category brings in the most revenue?"></div>
+      <button class="primary" id="ask-btn" type="submit">Ask</button>
+    </form>
+    <div class="chips" id="chips"></div>
+    <div class="error hidden" id="ask-error"></div>
+
+    <div id="answer" class="hidden">
+      <div style="margin-top:14px"><span class="status" id="a-status"></span> <span class="muted" id="a-meta"></span></div>
+      <p id="a-clarify" class="hidden"></p>
+      <div id="a-sql-wrap">
+        <div class="sqlhead"><strong>SQL</strong><button type="button" class="ghost" id="copy">Copy</button></div>
+        <pre id="a-sql"></pre>
+      </div>
+      <p id="a-explain"></p>
+      <ul class="notes" id="a-notes"></ul>
+      <div id="a-result" class="hidden">
+        <strong>Result</strong> <span class="muted" id="a-count"></span>
+        <div class="tablewrap"><table id="a-table"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-guard">
+    <h2 id="h-guard"><span class="step">3</span>Try to break the guard</h2>
+    <p class="muted" style="margin-top:-4px">Write any SQL, including something sneaky, and see what sqlsentry allows. No AI model is involved here, just the guard.</p>
+    <div class="chips" id="attacks"></div>
+    <textarea id="guard-sql" rows="3" spellcheck="false" style="margin-top:10px" placeholder="DROP TABLE orders"></textarea>
+    <div class="row" style="margin-top:8px"><button type="button" class="primary" id="guard-btn">Check with the guard</button></div>
+    <div id="guard-out" class="hidden" style="margin-top:12px">
+      <span class="status" id="g-status"></span>
+      <ul class="notes" id="g-notes"></ul>
+      <pre id="g-sql" class="hidden"></pre>
+    </div>
+    <div class="error hidden" id="guard-error"></div>
+  </section>
+
+  <footer><span id="version"></span> · Apache-2.0 · <a href="https://github.com/2002sairuthvik/sqlsentry" target="_blank" rel="noopener">github.com/2002sairuthvik/sqlsentry</a></footer>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const state = { mode: "sample", info: null };
+  const ATTACKS = [
+    "DROP TABLE orders",
+    "SELECT email FROM customers",
+    "SELECT 1; DELETE FROM orders",
+    "WITH x AS (DELETE FROM orders RETURNING id) SELECT * FROM x",
+    "SELECT pg_sleep(10)",
+    "SELECT * FROM customers",
+  ];
+
+  async function api(path, body) {
+    const res = await fetch("/playground/api/" + path, body === undefined ? {} : {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* non-JSON error page */ }
+    if (!res.ok) {
+      const msg = data && data.error ? data.error.message : "Request failed (HTTP " + res.status + ")";
+      const err = new Error(msg); err.code = data && data.error ? data.error.code : "http_error"; throw err;
+    }
+    return data;
+  }
+
+  const show = (el, on) => el.classList.toggle("hidden", !on);
+  const setText = (el, text) => { el.textContent = text || ""; };
+  function fillList(ul, items) {
+    ul.replaceChildren(...items.map((t) => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  }
+  function chip(text, onClick) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "ghost"; b.textContent = text;
+    b.addEventListener("click", onClick); return b;
+  }
+  function currentDs() { return state.info.datasources.find((d) => d.name === $("ds").value); }
+  function target() {
+    return state.mode === "custom"
+      ? { schema_ddl: $("ddl").value, dialect: $("dialect").value }
+      : { datasource: $("ds").value };
+  }
+
+  function renderDatasource() {
+    const ds = currentDs(); if (!ds) return;
+    setText($("ds-desc"), ds.description + " (" + ds.dialect + (ds.can_execute ? ", queries run read-only)" : ", SQL only)"));
+    setText($("ds-hidden"), ds.hidden_columns.length ? "Hidden by policy: " + ds.hidden_columns.join(", ") : "");
+    setText($("ds-schema"), ds.schema_text);
+    $("chips").replaceChildren(...ds.sample_questions.map((q) => chip(q, () => { $("question").value = q; ask(); })));
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    $("mode-sample").setAttribute("aria-pressed", String(mode === "sample"));
+    $("mode-custom").setAttribute("aria-pressed", String(mode === "custom"));
+    show($("sample-pane"), mode === "sample"); show($("custom-pane"), mode === "custom");
+    show($("chips"), mode === "sample");
+  }
+
+  async function checkSchema() {
+    show($("ddl-error"), false); setText($("ddl-result"), "Checking…"); show($("ddl-details"), false);
+    try {
+      const r = await api("schema", { schema_ddl: $("ddl").value, dialect: $("dialect").value });
+      setText($("ddl-result"), "Understood " + r.tables.length + " table" + (r.tables.length === 1 ? "" : "s") + ": " + r.tables.join(", "));
+      setText($("ddl-schema"), r.schema_text); show($("ddl-details"), true);
+    } catch (e) { setText($("ddl-result"), ""); setText($("ddl-error"), e.message); show($("ddl-error"), true); }
+  }
+
+  async function ask(ev) {
+    if (ev) ev.preventDefault();
+    const question = $("question").value.trim(); if (!question) { $("question").focus(); return; }
+    const btn = $("ask-btn"); btn.disabled = true; btn.textContent = "Thinking…";
+    show($("ask-error"), false); show($("answer"), false);
+    try {
+      const a = await api("ask", { ...target(), question, execute: true });
+      renderAnswer(a);
+    } catch (e) {
+      setText($("ask-error"), e.code === "generation_failed"
+        ? "sqlsentry couldn't produce valid SQL for that question. Try rephrasing it.\n\n" + e.message : e.message);
+      show($("ask-error"), true);
+    } finally { btn.disabled = false; btn.textContent = "Ask"; }
+  }
+
+  function renderAnswer(a) {
+    const st = $("a-status");
+    if (a.status === "ok") { st.className = "status ok"; st.textContent = "SQL ready"; }
+    else { st.className = "status warn"; st.textContent = "Needs clarification"; }
+    setText($("a-meta"), a.model + " · " + a.attempts + " attempt" + (a.attempts === 1 ? "" : "s") + " · " + (a.latency_ms / 1000).toFixed(1) + " s · " + a.dialect);
+    show($("a-clarify"), a.status !== "ok"); setText($("a-clarify"), a.clarification_question);
+    show($("a-sql-wrap"), Boolean(a.sql)); setText($("a-sql"), a.sql);
+    setText($("a-explain"), a.explanation);
+    fillList($("a-notes"), [...a.assumptions.map((x) => "Assumption: " + x), ...a.warnings.map((x) => "Note: " + x), ...(a.note ? [a.note] : [])]);
+    show($("a-result"), Boolean(a.result));
+    if (a.result) {
+      const t = $("a-table"); const head = document.createElement("tr");
+      head.replaceChildren(...a.result.columns.map((c) => { const th = document.createElement("th"); th.textContent = c; return th; }));
+      const rows = a.result.rows.map((r) => {
+        const tr = document.createElement("tr");
+        tr.replaceChildren(...r.map((v) => { const td = document.createElement("td"); td.textContent = v === null ? "NULL" : String(v); return td; }));
+        return tr;
+      });
+      t.replaceChildren(head, ...rows);
+      setText($("a-count"), a.result.row_count + " row" + (a.result.row_count === 1 ? "" : "s") + (a.result.truncated ? " (more exist, only the first " + a.result.row_count + " shown)" : ""));
+    }
+    show($("answer"), true);
+  }
+
+  async function guard() {
+    const sql = $("guard-sql").value.trim(); if (!sql) { $("guard-sql").focus(); return; }
+    show($("guard-error"), false); show($("guard-out"), false);
+    try {
+      const r = await api("validate", { ...target(), sql });
+      const st = $("g-status");
+      if (r.valid) {
+        st.className = "status ok"; st.textContent = "Allowed: this is exactly what would run";
+        fillList($("g-notes"), r.warnings); setText($("g-sql"), r.sql); show($("g-sql"), true);
+      } else {
+        st.className = "status bad"; st.textContent = "Blocked by the guard";
+        fillList($("g-notes"), r.errors.map((e) => e.message)); show($("g-sql"), false);
+      }
+      show($("guard-out"), true);
+    } catch (e) { setText($("guard-error"), e.message); show($("guard-error"), true); }
+  }
+
+  async function init() {
+    try { state.info = await api("info"); }
+    catch (e) { setText($("ask-error"), "Could not load the playground: " + e.message); show($("ask-error"), true); return; }
+    const info = state.info;
+    setText($("version"), "sqlsentry " + info.version);
+    if (info.model) setText($("notice"), "Questions and pasted schemas are sent to an AI model (" + info.model + ") to write SQL. Don't paste confidential schemas. Nothing is saved.");
+    $("ds").replaceChildren(...info.datasources.map((d) => { const o = document.createElement("option"); o.value = d.name; o.textContent = d.name; return o; }));
+    if (!info.allow_custom_schema) $("mode-custom").classList.add("hidden");
+    $("attacks").replaceChildren(...ATTACKS.map((s) => chip(s, () => { $("guard-sql").value = s; guard(); })));
+    renderDatasource();
+  }
+
+  $("ds").addEventListener("change", renderDatasource);
+  $("mode-sample").addEventListener("click", () => setMode("sample"));
+  $("mode-custom").addEventListener("click", () => setMode("custom"));
+  $("ddl-check").addEventListener("click", checkSchema);
+  $("ask-form").addEventListener("submit", ask);
+  $("guard-btn").addEventListener("click", guard);
+  $("copy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("a-sql").textContent); $("copy").textContent = "Copied"; }
+    catch (_) { $("copy").textContent = "Copy failed"; }
+    setTimeout(() => { $("copy").textContent = "Copy"; }, 1500);
+  });
+  init();
+})();
+</script>
+</body>
+</html>

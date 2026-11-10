@@ -171,7 +171,11 @@ def cmd_serve(args) -> int:
     except ImportError:
         print("The server needs: pip install 'sqlsentry[server]'", file=sys.stderr)
         return 1
-    app = create_app(_sentry(args))
+    sentry = _sentry(args)
+    if args.playground:
+        sentry.settings.server.playground.enabled = True
+        print(f"Playground: http://{args.host}:{args.port}/playground", file=sys.stderr)
+    app = create_app(sentry)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     return 0
 
@@ -257,6 +261,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp = with_config(sub.add_parser("serve", help="run the REST API"))
     sp.add_argument("--host", default="127.0.0.1")
     sp.add_argument("--port", type=int, default=8000)
+    sp.add_argument(
+        "--playground", action="store_true", help="also serve the browser playground at /playground"
+    )
     sp.set_defaults(func=cmd_serve)
 
     sp = with_config(sub.add_parser("mcp", help="run the MCP server (stdio) for AI agents"))
