@@ -70,6 +70,20 @@ sqlsentry ask warehouse "monthly revenue for 2025"
 
 Edited the generated SQL? Run your version with `POST /v1/sql/execute` (`{"datasource": ..., "sql": ...}`); it goes through the same guard and policy as generated SQL.
 
+## Let AI agents query your database, safely
+
+sqlsentry includes an [MCP](https://modelcontextprotocol.io) server, so assistants like Claude
+Desktop, Claude Code, Cursor or VS Code can explore and query your databases **through the guard**:
+read-only, one statement, hidden data invisible, rows capped. The agent can write the SQL itself
+(no LLM key needed in sqlsentry) or let sqlsentry write it.
+
+```bash
+pip install "sqlsentry[mcp]"
+claude mcp add --transport stdio sqlsentry -- sqlsentry-mcp --config /absolute/path/to/sqlsentry.yaml
+```
+
+Setup for each client: [docs/mcp.md](https://github.com/2002sairuthvik/sqlsentry/blob/main/docs/mcp.md).
+
 ## Why sqlsentry
 
 Text-to-SQL is easy to demo and hard to trust. sqlsentry focuses on the trust part.

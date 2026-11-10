@@ -37,9 +37,10 @@ jobs:
       - name: Smoke-test the built wheel in a clean environment
         run: |
           python -m venv /tmp/smoke
-          /tmp/smoke/bin/pip install "$(ls dist/*.whl)[server]"
+          /tmp/smoke/bin/pip install "$(ls dist/*.whl)[server,mcp]"
           cd "$(mktemp -d)"
           /tmp/smoke/bin/sqlsentry --version
+          /tmp/smoke/bin/sqlsentry-mcp --version
           /tmp/smoke/bin/sqlsentry init
           /tmp/smoke/bin/sqlsentry inspect store | grep -q "TABLE customers"
           if /tmp/smoke/bin/sqlsentry validate store "DELETE FROM orders"; then

@@ -5,6 +5,7 @@ Safety-first, model-agnostic natural language to SQL.
 - [Getting started](getting-started.md)
 - [Configuration](configuration.md)
 - [LLM providers](providers.md)
+- [MCP server for AI agents](mcp.md)
 - [Security model](security-model.md)
 - [Architecture](architecture.md)
 

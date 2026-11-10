@@ -55,11 +55,19 @@ SQLite, `SET SESSION TRANSACTION READ ONLY` on MySQL) with a statement timeout.
 - SQL a user edited (`POST /v1/sql/execute` with `datasource` + `sql`, or `execute_sql()`) goes
   through exactly the same guard, policy, scope check and read-only execution as generated SQL.
 
+## AI agents (MCP server)
+
+The MCP server applies exactly the same guard, policy and read-only execution. The difference is
+who sees the output: when an agent calls `describe_schema` or `run_sql`, the policy-filtered schema
+and the **result rows go to the agent**, and therefore to whatever model powers it. That is the point
+of the tool, but choose the datasource policy (and the agent's model) with that in mind. See
+[mcp.md](mcp.md).
+
 ## What is sent to the LLM
 
 Only the policy-filtered schema (table and column names, types, comments, foreign keys, and a few
 sample values from visible text columns), your glossary, your examples, and the question.
-**Query results are never sent.** If even sample values are too sensitive, set `sample_values: 0`.
+**Query results are never sent** to sqlsentry's model (agents using the MCP server do receive the rows they query, see above). If even sample values are too sensitive, set `sample_values: 0`.
 
 ## What you still need to do
 

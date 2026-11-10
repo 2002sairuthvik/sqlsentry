@@ -30,6 +30,7 @@ flowchart LR
 | `engine.py` | `SQLSentry`, the public API that ties it together |
 | `store/` | Generations, executions (no rows) and feedback |
 | `server/` | FastAPI app, auth, rate limit, routes |
+| `mcp_server.py` | MCP server for AI agents (stdio), built on the same engine and guard |
 | `cli.py`, `evals.py`, `client.py` | CLI, accuracy evaluation, HTTP client |
 
 The core (everything except `server/`) has no web-framework dependency, so it works as a

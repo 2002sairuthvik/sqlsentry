@@ -2,7 +2,11 @@
 
 sqlsentry reads one YAML file: `--config`, else `$SQLSENTRY_CONFIG`, else `./sqlsentry.yaml`.
 `${VAR}` and `${VAR:-default}` are expanded from the environment, and the CLI also loads a
-`.env` file from the working directory. `sqlsentry init` writes a commented starter file.
+`.env` file from the working directory.
+
+**Relative paths** in the file (`schema_file`, SQLite database paths in `url`, and `store.url`) are
+resolved from the config file's own folder, not from the current directory, so the same config works
+when sqlsentry is started from anywhere (for example by an MCP client). `sqlsentry init` writes a commented starter file.
 
 ## `llm`
 

@@ -6,6 +6,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- MCP server (`sqlsentry-mcp`, `sqlsentry mcp`, extra `sqlsentry[mcp]`): AI agents query databases
+  through the guard. Tools: `list_datasources`, `describe_schema`, `validate_sql`, `run_sql`, plus
+  `generate_sql` and `ask` when an LLM is configured. Reads keys from a `.env` next to the config.
+- Execution results include the SQL as run (`sql`) and the guard's `warnings`.
+
+### Fixed
+- `truncated` was never true when the row cap cut results off (the injected LIMIT equalled the cap).
+  Queries now run with one row of headroom to detect truncation; the extra row is never returned.
+
+### Changed
+- Relative paths in the config (SQLite `url`, `store.url`, `schema_file`) are resolved from the
+  config file's folder instead of the current directory. The example config now uses
+  `sqlite:///store.db`.
+
 ## [0.1.1] - 2026-11-10
 
 First release on PyPI: `pip install sqlsentry`.

@@ -4,6 +4,7 @@ sqlsentry init                       # starter config + sample database in this 
 sqlsentry inspect store              # exactly what the model will see
 sqlsentry ask store "top 5 customers by revenue" --execute
 sqlsentry validate store "SELECT * FROM customers"
+sqlsentry mcp                        # MCP server for AI agents (stdio)
 sqlsentry serve                      # REST API on http://127.0.0.1:8000 (docs at /docs)
 sqlsentry eval evals/datasets/sample_store.yaml
 sqlsentry export-context store -o store.schema.json   # schema file for SQL-only use elsewhere
@@ -175,6 +176,12 @@ def cmd_serve(args) -> int:
     return 0
 
 
+def cmd_mcp(args) -> int:
+    from .mcp_server import main as mcp_main
+
+    return mcp_main((["--config", args.config] if args.config else []) + (["-v"] if args.verbose else []))
+
+
 def cmd_eval(args) -> int:
     from .evals import format_report, run_eval
 
@@ -251,6 +258,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--host", default="127.0.0.1")
     sp.add_argument("--port", type=int, default=8000)
     sp.set_defaults(func=cmd_serve)
+
+    sp = with_config(sub.add_parser("mcp", help="run the MCP server (stdio) for AI agents"))
+    sp.set_defaults(func=cmd_mcp)
 
     sp = with_config(sub.add_parser("eval", help="measure accuracy on a golden dataset"))
     sp.add_argument("dataset")

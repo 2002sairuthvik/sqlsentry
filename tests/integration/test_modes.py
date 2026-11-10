@@ -239,3 +239,16 @@ def test_export_context_then_use_as_schema_only(sample_db_path, tmp_path, capsys
     assert "schema-only" in out and "TABLE customers" in out
     assert main(["ask", "copy", "q", "-c", str(only), "--execute"]) == 1
     assert "execution_unavailable" in capsys.readouterr().err
+
+
+def test_truncation_is_detected_and_extra_row_never_returned(sentry):
+    res = sentry.execute_sql("store", "SELECT id FROM orders ORDER BY id", max_rows=5)
+    assert res.row_count == 5 and res.truncated is True
+    assert [r[0] for r in res.rows] == [1, 2, 3, 4, 5]
+    assert "LIMIT 5" in res.sql and "LIMIT 6" not in res.sql  # what the user sees
+    exact = sentry.execute_sql("store", "SELECT id FROM orders ORDER BY id LIMIT 3", max_rows=5)
+    assert exact.row_count == 3 and exact.truncated is False  # the query itself asked for 3
+    whole = sentry.execute_sql("store", "SELECT DISTINCT status FROM orders", max_rows=5)
+    assert whole.row_count == 4 and whole.truncated is False
+    total = sentry.execute_sql("store", "SELECT COUNT(*) FROM orders", max_rows=5)
+    assert total.rows == [[900]] and total.truncated is False
