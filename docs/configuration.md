@@ -36,6 +36,7 @@ datasources:
   store:
     url: sqlite:///store.db     # any SQLAlchemy URL; use a read-only user
     schema_file: null           # .sql DDL or .json bundle, relative to this config file
+    schema_ddl: null            # or the DDL inline, as text
     dialect: sqlite             # inferred from the URL; required when there is no url
     db_schema: public           # optional schema/namespace to introspect
     description: ...            # shown to the model
@@ -94,6 +95,8 @@ engine:
 ```
 
 ## `server` and `store`
+
+The `server.playground` block is described in [playground.md](playground.md).
 
 ```yaml
 server:

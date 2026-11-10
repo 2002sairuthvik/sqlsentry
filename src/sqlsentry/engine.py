@@ -40,7 +40,7 @@ from .llm.parsing import ParseError, parse_candidate
 from .llm.registry import build_provider
 from .prompts import build_prompt, repair_messages
 from .schema.cache import TTLCache
-from .schema.files import load_schema_file
+from .schema.files import load_schema_file, parse_ddl
 from .schema.introspect import introspect
 from .schema.linker import link_tables, select_examples
 from .schema.models import SchemaCatalog
@@ -83,6 +83,7 @@ class SQLSentry:
         self._engines: dict[str, Engine] = {}
         self._catalogs: TTLCache[SchemaCatalog] = TTLCache(settings.engine.schema_cache_ttl_s)
         self._lock = threading.Lock()
+        self._temporary: set[str] = set()
         if store is not None:
             self.store = store
         elif settings.store.url:
@@ -97,7 +98,26 @@ class SQLSentry:
     # ------------------------------------------------------------------ datasources
 
     def datasources(self) -> list[str]:
-        return list(self.settings.datasources)
+        """Configured datasources (temporary ones added with ``add_datasource(temporary=True)`` excluded)."""
+        return [n for n in self.settings.datasources if n not in self._temporary]
+
+    def add_datasource(self, name: str, cfg: DataSourceConfig, *, temporary: bool = False) -> None:
+        """Register a datasource at runtime. Temporary ones (e.g. a schema pasted into the playground)
+        are hidden from ``datasources()`` listings."""
+        with self._lock:
+            self.settings.datasources[name] = cfg
+            if temporary:
+                self._temporary.add(name)
+        self._catalogs.invalidate(name)
+
+    def remove_datasource(self, name: str) -> None:
+        with self._lock:
+            self.settings.datasources.pop(name, None)
+            self._temporary.discard(name)
+            engine = self._engines.pop(name, None)
+        self._catalogs.invalidate(name)
+        if engine is not None:
+            engine.dispose()
 
     def datasource(self, name: str) -> DataSourceConfig:
         try:
@@ -119,6 +139,10 @@ class SQLSentry:
         ds = self.datasource(name)
 
         def load() -> SchemaCatalog:
+            if ds.schema_ddl:
+                return parse_ddl(
+                    ds.schema_ddl, datasource=name, dialect=ds.resolved_dialect, source="inline DDL"
+                ).filtered(ds.policy)
             if ds.schema_file:
                 log.info("loading schema for datasource %s from %s", name, ds.schema_file)
                 return load_schema_file(

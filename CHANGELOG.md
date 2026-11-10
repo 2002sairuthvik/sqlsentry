@@ -11,6 +11,13 @@ All notable changes to this project are documented here. The format follows
   through the guard. Tools: `list_datasources`, `describe_schema`, `validate_sql`, `run_sql`, plus
   `generate_sql` and `ask` when an LLM is configured. Reads keys from a `.env` next to the config.
 - Execution results include the SQL as run (`sql`) and the guard's `warnings`.
+- Browser playground (`/playground`, `sqlsentry serve --playground`): ask questions, paste your own
+  schema (never executed), and try to break the guard. Per-visitor rate limits, listed datasources
+  only, nothing stored in the shipped demo config. Ready-made Hugging Face Space in
+  `deploy/huggingface/`.
+- `schema_ddl`: inline DDL for a schema-only datasource, as an alternative to `schema_file`.
+- `SQLSentry.add_datasource()` / `remove_datasource()` to register datasources at runtime.
+- `HEAD /` and `HEAD /health` for uptime checks and hosting health probes.
 
 ### Fixed
 - `truncated` was never true when the row cap cut results off (the injected LIMIT equalled the cap).

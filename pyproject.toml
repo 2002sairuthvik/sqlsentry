@@ -54,7 +54,7 @@ Issues = "https://github.com/2002sairuthvik/sqlsentry/issues"
 where = ["src"]
 
 [tool.setuptools.package-data]
-sqlsentry = ["py.typed", "prompts/*.md", "demo/*.yaml"]
+sqlsentry = ["py.typed", "prompts/*.md", "demo/*.yaml", "server/static/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

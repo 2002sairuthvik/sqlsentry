@@ -70,6 +70,16 @@ sqlsentry ask warehouse "monthly revenue for 2025"
 
 Edited the generated SQL? Run your version with `POST /v1/sql/execute` (`{"datasource": ..., "sql": ...}`); it goes through the same guard and policy as generated SQL.
 
+## Try it in your browser
+
+```bash
+sqlsentry serve --playground        # http://127.0.0.1:8000/playground
+```
+
+Ask questions, paste your own `CREATE TABLE`s to get SQL for your schema, and try to get something
+past the guard. To host a free public demo on Hugging Face Spaces, see
+[docs/playground.md](https://github.com/2002sairuthvik/sqlsentry/blob/main/docs/playground.md).
+
 ## Let AI agents query your database, safely
 
 sqlsentry includes an [MCP](https://modelcontextprotocol.io) server, so assistants like Claude

@@ -1,0 +1,53 @@
+# Public playground config (Hugging Face Space). Paths are relative to this file.
+# Needs the GROQ_API_KEY secret set in the Space settings.
+
+llm:
+  default: groq
+  providers:
+    groq:
+      type: openai_compatible
+      base_url: https://api.groq.com/openai/v1
+      model: openai/gpt-oss-120b
+      api_key_env: GROQ_API_KEY
+      max_retries: 1
+      timeout_s: 30
+
+datasources:
+  store:
+    url: sqlite:///store.db
+    description: Fictional online store with customers, products, orders and order items.
+    policy:
+      tables: {include: ["*"], exclude: ["internal_*"]}
+      columns: {hidden: ["customers.email"]}
+      max_rows: 50
+      timeout_s: 10
+      allow_execute: true
+    glossary:
+      - "revenue = SUM(order_items.quantity * order_items.unit_price)"
+      - "Revenue and sales figures only count orders with status 'delivered' or 'shipped'. Questions about orders in general (counts, sizes, items, units) include every status."
+      - "order_date and signup_date are ISO dates stored as text (YYYY-MM-DD)."
+
+engine:
+  max_attempts: 3
+
+server:
+  auth_enabled: true            # the REST API stays closed: no consumers are configured
+  rate_limit_per_minute: 30
+  playground:
+    enabled: true
+    datasources: [store]
+    allow_custom_schema: true
+    custom_schema_max_chars: 30000
+    requests_per_minute: 6      # model calls per visitor; guard checks allow 6x more
+    max_rows: 50
+    trust_proxy_headers: true   # behind the Hugging Face proxy
+    sample_questions:
+      store:
+        - Which product category brings in the most revenue?
+        - Who are the top 5 customers by revenue?
+        - How many orders are still pending?
+        - What is the average order value per customer segment?
+        - Show me customer email addresses
+
+store:
+  url: null                     # never save what visitors ask

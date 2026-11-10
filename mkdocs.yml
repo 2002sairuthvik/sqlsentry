@@ -7,6 +7,7 @@ nav:
   - Configuration: configuration.md
   - LLM providers: providers.md
   - MCP server (AI agents): mcp.md
+  - Playground: playground.md
   - Security model: security-model.md
   - Architecture: architecture.md
 markdown_extensions:
